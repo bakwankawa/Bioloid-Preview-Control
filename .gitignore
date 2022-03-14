@@ -2,3 +2,4 @@ bioloid_venv/
 src/.vs/slnx.sqlite
 src/.vs/src/v16/.suo
 src/.vs/VSWorkspaceState.json
+src/DynamixelSDK
