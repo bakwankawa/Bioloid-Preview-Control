@@ -22,8 +22,8 @@ class PreviewControl:
         self.A = np.matrix([[1,self.dt, (self.dt ** 2) / 2],
                             [0, 1, self.dt],
                             [0, 0, 1]])
-        self.B = np.matrix([(self.dt ** 3) / 6, (self.dt ** 2) / 2, self.dt]).T
-        self.C = np.matrix([1, 0, -self.zc / self.g])
+        self.B = np.matrix([(self.dt ** 3) / 6, (self.dt ** 2) / 2, self.dt]).T # (1.666666666666667e-07, 5e-05, 1e-02)
+        self.C = np.matrix([1, 0, -self.zc / self.g]) # (1, 0, -0.0234)
 
         # Kajita's Book P:145 Eq:4.77
         self.A_tilde = np.hstack((np.matrix([1, 0, 0, 0]).T, np.vstack((self.C * self.A, self.A))))
@@ -117,7 +117,7 @@ class PreviewControl:
 
     def update_foot_trajectory(self):
         """
-        Fungsi yang dipanggil untuk memperbarui trajektori kaki.
+        Fungsi yang dipanggil untuk memperbarui trajektori kaki bezier curve.
         .........
 
         Attributes
@@ -135,7 +135,7 @@ class PreviewControl:
 
         self.p_start : matrix
             -> Beranggotakan matriks 1x3
-            Digunakan untuk menyimpan nilai self.cur_l_foot_pose (pose kaki saat ini) ??????
+            Digunakan untuk menyimpan nilai self.cur_l_foot_pose (pose kaki saat ini) 
         self.p_end : matrix
             -> Beranggotakan matriks 1x3
             Digunakan untuk menyimpan nilai (self.footstep[1][0], self.footstep[1][1], 0)
@@ -150,12 +150,22 @@ class PreviewControl:
         self.walking_phase : int
             Digunakan untuk menyatakan kondisi DSP (0) dan SSP (1)
         self.t_bez : float
-            Parameter waktu bezier yang diinisiasi dengan nilai 0.0 dan akan melakukan increment sebesar self.dt_bez (self.dt_bez = 0.037)
+            Parameter waktu bezier yang diinisiasi dengan nilai 0.0 dan akan melakukan increment 
+            sebesar self.dt_bez (self.dt_bez = 0.037)
         self.walking_ready : Boolean
             ???
         self.first : Boolean
             ???
-        self.cur_l_foot_pose :  
+        self.cur_l_foot_pose : matrix
+            -> Beranggotakan matriks 1x3
+            Digunakan untuk menyimpan nilai list array self.footstep saat ini, karena self.footstep akan diupdate pada
+            fungsi self.update_footstep()
+        self.l : list array
+            -> Beranggotakan list array 1x3
+            Digunakan untuk menyimpan dan appen nilai ([self.l_foot_pose[0,0], self.foot_y, self.l_foot_pose[0,2]]).
+            Nilai pada self.l[0] akan di pop apabila panjang list = self.previewStepNum
+        self.previewStepNum : int
+            Bernilai 120, digunakan sebagai parameter menyimpan nilai posisi bezier curve pada self.l dari self.l_foot_pose
         
         
         ---------
@@ -171,6 +181,12 @@ class PreviewControl:
             -> biar nilai incrementnya sebanyak self.t_ssp (0.27).
             biar pas akhirnya nilai t_bez += self.dt_bez =/mendekati 1 apabila dilooping sebanyak 27x,
             KARENA SATU KALI LOOPING ASUMSI TIME ADALAH 0.01
+        4.  Kenapa ada self.update_foot_path() dan sel.update_footstep()?
+            -> self.update_foot_path() menghasilkan append self.footstep(dx, dy) dari rumus kajita.
+                nilai self.footstep() digunakan untuk p_start, p_end, p_cnt (YANG MASIH BERUPA TITIK 3 STATIS) yang
+                digunakan pada bezier curve sebagai posisi awal, akhir, tengah.
+            -> self.update_footstep() menghasilkan POSISI X Y Z  parabola (digunakan untuk melangkah, titik dinamis
+                karna dieksekusi sebanyak 27 titik sampai t=1)
 
         """
 
@@ -205,7 +221,7 @@ class PreviewControl:
                 self.cur_l_foot_pose[0, 2] = 0
 
                 """Kenapa banyak variable karena butuh digunakan untuk perkalian matriks, sedangkan 
-                bentuknya self.footstep masih berbentuk list array"""
+                bentuknya self.footstep masih berbentuk list array karena akan di pop"""
 
                 # self.update_foot_path() menghasilkan matriks 1x3, berisi posisi x y z 
                 self.r_foot_pose = self.update_foot_path()
@@ -232,8 +248,31 @@ class PreviewControl:
 
     def update_foot_path(self):
         """
-        Fungsi yang dipanggil untuk 
+        Fungsi yang dipanggil untuk membuat trajektori bezier curve.
+        Untuk melihat rumus asli bezier bisa dikonversi menjadi representasi matriks buka troubleshooting_documentation.py
+        masalah no 3.
+        .........
+
+        Attributes
+        ---------
+        self.t_bez : float
+            Parameter waktu yang akan inc setiap self.dt_bez (0.037) sebanyak 27x dalam satu langkah
+        t : matrix
+            -> Beranggotakan matriks 1x3
+            Digunakan sebagai penjabaran rumus bezier curve dalam representasi matriks
+        coef : matrix
+            -> Beranggotakan  matriks 3x3
+            Digunakan sebagai penjabaran rumus bezier curve dalam representasi matriks
+        point : matrix
+            -> Beranggotakan matriks 3x1
+            Digunakan sebagai matriks P0 P1 P2 dalam rumus bezier curve
+        path : matrix
+            -> Beranggotakan matriks 1x3
+            Merupakan hasil dari fungsi yang memberikan posisi x y z bezier curve
+
         """
+        # self.t_bez tidak boleh melebihi 1 karena rumus bezier 3 dimensi maksimal t = 1
+        # kalo bingung lihat di troubleshooting_documentation, number 3
         if(self.t_bez >= 1):
             self.t_bez = 1
 
@@ -256,8 +295,42 @@ class PreviewControl:
             self.support_foot = 1
 
     def update_footstep(self):
+        """
+        Fungsi ini digunakan untuk mengupdate nilai self.footstep (zmp)
+        .........
+
+        Methods
+        ---------
+        self.swap_support_foot()
+            Menjadi switcher kaki kiri dan kanan
+
+
+        Attributes
+        ---------
+        self.cnt : int
+            Digunakan sebagai parameter kondisi True untuk melanjutkan algoritma
+            -> Kenapa apabila self.cnt = 30 maka kondisi True, karena tiap satu kali looping = self.dt (0.01).
+                Dan satu kali langkah self.t_step = 0.3, maka self.dt * 30 = 0.3 (satu langkah)
+        self.footstep : list array
+            -> Berupa array 1x2
+            Digunakan untuk menyimpan nilai zmp x dan y
+        self.support : int
+            Digunakan untuk menyatakan kaki support kiri (1) dan kanan (-1)
+        self.cmd_x : float
+            Digunakan sebagai parameter kecepatan jalan robot sumbu x
+        self.sx : float
+            Digunakan untuk menyimpan nilai self.cmd_x
+        self.sy : float
+            Digunakan untuk menyimpan nilai  -2 * self.hip_offset + self.cmd_y
+        self.sa : float
+            Digunakan untuk menyimpan += self.cmd_a
+        dx : float
+            Menyimpan hasil path zmp posisi x
+        dy : float
+            Menyimpan hasil path zmp posisi y
+        """
         # if parameter berisi self.cnt (inisiasi = 1) % 30 == 0:
-        # self.cnt akan += 1, nilai if dieksekusi apabila self.cnt kelipatan 30
+        # self.cnt akan += 1, nilai if dieksekusi apabila self.cnt kelipatan 30.
         if self.cnt % int(self.t_step / self.dt) == 0:
             self.footstep.pop(0)
 
@@ -286,6 +359,25 @@ class PreviewControl:
         self.cnt += 1
 
     def update_pose(self):
+        """
+        Fungsi ini digunakan untuk memanggil self.update_foot_trajectory() dan menambahkan atau mengurangi isi dari
+        list self.px_ref dan self.py_ref
+        .........
+
+        Methods
+        ---------
+        self.update_foot_trajectory()
+            Menghasilkan trajektori bezier curve
+
+
+        Attributes
+        ---------
+        self.px_ref : list array
+            Digunakan untuk menyimpan dan append nilai self.footstep([0][0]) (zmp x)
+        self.py_ref : list array
+            Digunakan untuk menyimpan dan append nilai self.footstep([0][1]) (zmp y)
+
+        """
         # Perbaharui Trajektori Kaki
         self.update_foot_trajectory()
 
@@ -299,10 +391,34 @@ class PreviewControl:
         self.py_ref.append(self.footstep[0][1])
 
     def update_preview_control(self):
+        """
+        Fungsi ini digunakan untuk memperbaharui trakjektori CoM
+        .........
+
+        Attributes
+        ---------
+        self.px_ref : list array
+            Berisi self.footstep[0][0] (zmp x)
+        self.py_ref : list array
+            Berisi self.footstep[0][1] (zmp y)
+        self.A : matrix
+            -> Berisi matriks 3x3
+        Self.B : matriks
+            -> Berisi matriks 1x3
+            Nilai yang disimpan : (1.666666666666667e-07, 5e-05, 1e-02)
+        self.C : matrix
+            -> Berupa matriks 1x3 
+            Nilai yang disimpan : (1, 0, -0.0234)   
+        self.x : matriks
+            -> Berupa matriks 3x1
+        xe : float
+            Nilai yang disimpan : (self.px_ref[0] - self.C * self.x)
+        """
 
         #Perbaharui Trajektori CoM
         xe = self.px_ref[0] - self.C * self.x
         ye = self.py_ref[0] - self.C * self.y
+        # print("xe: {}, ye: {}".format(xe, ye))
 
         G_x, G_y = 0,0
 
@@ -310,6 +426,7 @@ class PreviewControl:
             G_x += self.G[j] * self.px_ref[j]
             G_y += self.G[j] * self.py_ref[j]
             self.walking_ready = True
+            # print(self.G[j])
 
         # Kajita's Book P:146 Eq:4.80
         ux = -self.Ks * xe - self.Kx * self.x - G_x
@@ -323,6 +440,27 @@ class PreviewControl:
         if(not self.first):
             self.com_pose -= 0.0065
     def update_walking_pattern(self):
+        """
+        Fungsi ini digunakan untuk
+        .........
+
+        Methods
+        ---------
+        self.update_pose()
+            Menghasilkan trajektori bezier curve dan menambah atau mengurangi anggota list dari self.px_ref (zmp x)
+            dan self.py_ref (zmp y)
+        self.update_preview_control()
+
+        self.update_footstep()
+            Menghasilkan prediksi nilai zmp x dan y yang akan di append pada self.footstep dan melakukan switching
+            kaki support kanan dan kiri.
+
+
+        Attributes
+        ---------
+        self.t : float
+            Parameter waktu yang akan di inc setiap self.dt (0.01)
+        """
 
         self.update_pose()
 
@@ -330,6 +468,7 @@ class PreviewControl:
             self.update_preview_control()
 
         self.t += self.dt
+        # jika sudah satu kali melangkah, reset
         if self.t > self.t_step:
             self.t = 0
         # Perbaharui ZMP
