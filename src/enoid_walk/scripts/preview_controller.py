@@ -65,6 +65,11 @@ class PreviewControl:
         self.x = np.matrix(np.zeros(3)).T
         self.y = np.matrix(np.zeros(3)).T
 
+        #State untuk plot v_CoM
+        self.one_step = False
+        self.x0 = np.matrix(np.zeros(3)).T
+        self.y0 = np.matrix(np.zeros(3)).T
+
         #ZMP State
         self.px_ref = []
         self.py_ref = []
@@ -78,6 +83,7 @@ class PreviewControl:
         self.support_foot = -1
 
         self.com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
+        self.v_com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
         self.l_foot_pose = np.matrix([0.0, self.hip_offset, 0.0], dtype=float)
         self.r_foot_pose = np.matrix([0.0, -self.hip_offset, 0.0], dtype=float)
         self.cur_l_foot_pose = np.matrix([0.0, self.hip_offset, 0.0], dtype=float)
@@ -139,7 +145,7 @@ class PreviewControl:
         self.p_end : matrix
             -> Beranggotakan matriks 1x3
             Digunakan untuk menyimpan nilai (self.footstep[1][0], self.footstep[1][1], 0)
-            -> self.footstep diinisiasi sebagai matriks 3x2, posisi x dan y
+            -> self.footstep diinisiasi sebagai matriks 3x0, posisi x dan y
             -> matriks dari self.footstep akan selalu di append dengan value [dx, dy] di fungsi update_footstep()
             -> value dari self.footstep[0] akan di pop setelah update_footstep() dipanggil sebanyak 30x 
         self.p_cnt : matrix
@@ -153,9 +159,9 @@ class PreviewControl:
             Parameter waktu bezier yang diinisiasi dengan nilai 0.0 dan akan melakukan increment 
             sebesar self.dt_bez (self.dt_bez = 0.037)
         self.walking_ready : Boolean
-            ???
+            Bernilai True apabila nilai G_x dan G_y sudah di += sampai iterasi self.previewStepNum pada self.preview_control 
         self.first : Boolean
-            ???
+            Bernilai True apabila kondisi kaki sedang DSP dan self.support_foot = 1 (kiri)
         self.cur_l_foot_pose : matrix
             -> Beranggotakan matriks 1x3
             Digunakan untuk menyimpan nilai list array self.footstep saat ini, karena self.footstep akan diupdate pada
@@ -171,7 +177,7 @@ class PreviewControl:
         ---------
 
         QUESTION
-        1.  Kenapa reset DSP tiap < 0.3 atau > 0.27 (SSP selama 0.27 ini darimana??)
+        1.  Kenapa reset DSP tiap < 0.03 atau > 0.27 (SSP selama 0.27 ini darimana??)
             -> tunning
         2.  Kenapa list self.footstep di pop setelah 30x append matriks??
             -> list akan di pop setiap kelipatan 30 karena langkah selesai pada t.step 0.3. 
@@ -264,7 +270,7 @@ class PreviewControl:
             -> Beranggotakan  matriks 3x3
             Digunakan sebagai penjabaran rumus bezier curve dalam representasi matriks
         point : matrix
-            -> Beranggotakan matriks 3x1
+            -> Beranggotakan matriks 3x0
             Digunakan sebagai matriks P0 P1 P2 dalam rumus bezier curve
         path : matrix
             -> Beranggotakan matriks 1x3
@@ -294,6 +300,8 @@ class PreviewControl:
         else:
             self.support_foot = 1
 
+        self.one_step = True
+
     def update_footstep(self):
         """
         Fungsi ini digunakan untuk mengupdate nilai self.footstep (zmp)
@@ -312,7 +320,7 @@ class PreviewControl:
             -> Kenapa apabila self.cnt = 30 maka kondisi True, karena tiap satu kali looping = self.dt (0.01).
                 Dan satu kali langkah self.t_step = 0.3, maka self.dt * 30 = 0.3 (satu langkah)
         self.footstep : list array
-            -> Berupa array 1x2
+            -> Berupa array 1x0
             Digunakan untuk menyimpan nilai zmp x dan y
         self.support : int
             Digunakan untuk menyatakan kaki support kiri (1) dan kanan (-1)
@@ -355,6 +363,11 @@ class PreviewControl:
                 self.footstep.append([dx, dy])
 
             self.swap_support_foot()
+        
+        if self.cnt % int(self.t_step / self.dt) == 1 or self.cnt / int(self.t_step / self.dt) == 0:
+            self.x0 = self.x
+            self.y0 = self.y
+            # print(self.cnt)
 
         self.cnt += 1
 
@@ -410,7 +423,7 @@ class PreviewControl:
             -> Berupa matriks 1x3 
             Nilai yang disimpan : (1, 0, -0.0234)   
         self.x : matriks
-            -> Berupa matriks 3x1
+            -> Berupa matriks 3x0
         xe : float
             Nilai yang disimpan : (self.px_ref[0] - self.C * self.x)
         """
@@ -435,8 +448,16 @@ class PreviewControl:
         # Kajita's Book P:145 Eq:4.77
         self.x = self.A * self.x + self.B * ux
         self.y = self.A * self.y + self.B * uy
+        # print("x: {}, y: {}".format(self.x, self.y))
+
+        # Digunakan untuk menghitung v = x-x0 / t_step
+        if self.one_step:
+            self.v_com_pose[0,0], self.v_com_pose[0,1], self.v_com_pose[0,2] = ((self.x[0,0] - self.x0[0,0]) / self.t_step, 
+            (abs(self.y[0,0] - self.y0[0,0]) / self.t_step), (self.zc - self.zc) / self.t_step)
+            self.one_step = False
 
         self.com_pose[0,0], self.com_pose[0,1], self.com_pose[0,2] = self.x[0,0] + self.x_offset, self.y[0,0], self.zc
+
         if(not self.first):
             self.com_pose -= 0.0065
     def update_walking_pattern(self):
@@ -505,7 +526,7 @@ class PreviewControl:
             -> self.r_foot_pose merupakan hasil dari update_walking_pose() menghasilkan path : matriks 1x3, posisi x y z
         l_trajectory : list
             -> Beranggotakan matriks 1x7, +=1 setiap looping
-            -> 7 matriks karena untuk diplot butuh direpresentasika ke quarternion (x, y, z, x2, y2, z2, w)
+            -> 7 matriks karena untuk diplot butuh direpresentasika ke quarternion (x, y, z, x0, y2, z2, w)
             Digunakan untuk menyimpain nilai [self.l_foot[0, 0], self.l_foot[0, 1], self.r_foot[0, 2], 0, 0, 0, 0]
             *self.l_foot merupakan matriks 1x3 hasil dari self.l
             *self.l merupakan matriks 1x3 hasil dari self.l_foot_pose (yang berbeda adalah nilai y = self.foot_y)
@@ -538,6 +559,9 @@ class PreviewControl:
 
             r_trajectory.append([self.r_foot[0,0], self.r_foot[0,1], self.r_foot[0,2],0,0,0,0])
             l_trajectory.append([self.l_foot[0,0], self.l_foot[0,1], self.l_foot[0,2],0,0,0,0])
+            if self.one_step:
+                print("V_x_CoM: {}, V_y_CoM: {}, V_z_CoM: {}".format(self.v_com_pose[0,0], self.v_com_pose[0,1],
+                self.v_com_pose[0,2]))
 
         if debug:
 
