@@ -6,5 +6,3 @@
   <li>3. Troubleshoot exec bash file yg minta di sigtermkill</li>
   <li>4. Buat mindmap, kalo kelar janjiin bimbingan</li>
 </ul>
-
-Author : Mikael Nias
