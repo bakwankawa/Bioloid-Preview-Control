@@ -56,7 +56,6 @@ def gyr_callback(msg):
 
 
 def vel_callback(msg):
-    global cmd_vel
     cmd_vel = msg
 
 
@@ -225,8 +224,8 @@ def final_test(pc, fz, ik):
             com_msg.z = COM[0,2]
 
 def main():
-    global X_OFFSET, COM, com_msg, cmd_vel
-    rospy.init_node('velocityControl_walk', anonymous=False)
+    global X_OFFSET, COM, com_msg
+    rospy.init_node('enoid_walk', anonymous=False)
     rospy.Subscriber("ori_data", Vector3, ori_callback)
     rospy.Subscriber("gyr_data", Vector3, gyr_callback)
     rospy.Subscriber("walk_vel", Vector3, vel_callback)
@@ -257,9 +256,6 @@ def main():
             stand(ik)
 
         elif walk_cmd.data == 1:
-
-            pc.cmd_x = cmd_vel.x
-            # rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
 
             if walk_mode.data == 1 and (feedback_mode.data == 2):
                 ik.TILT = 15

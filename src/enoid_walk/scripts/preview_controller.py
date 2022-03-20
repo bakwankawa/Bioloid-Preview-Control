@@ -15,15 +15,15 @@ class PreviewControl:
         self.g = 9.8
         self.x_offset = x_offset
         self.com_swing = com_swing
-        self.foot_y = foot_distance + (0.0385) # 0.045
+        self.foot_y = foot_distance + (0.0385)
         self.first = False
 
         # Kajita's Book P:144 Eq:4.72
         self.A = np.matrix([[1,self.dt, (self.dt ** 2) / 2],
                             [0, 1, self.dt],
                             [0, 0, 1]])
-        self.B = np.matrix([(self.dt ** 3) / 6, (self.dt ** 2) / 2, self.dt]).T # (1.666666666666667e-07, 5e-05, 1e-02)
-        self.C = np.matrix([1, 0, -self.zc / self.g]) # (1, 0, -0.0234)
+        self.B = np.matrix([(self.dt ** 3) / 6, (self.dt ** 2) / 2, self.dt]).T
+        self.C = np.matrix([1, 0, -self.zc / self.g])
 
         # Kajita's Book P:145 Eq:4.77
         self.A_tilde = np.hstack((np.matrix([1, 0, 0, 0]).T, np.vstack((self.C * self.A, self.A))))
@@ -59,7 +59,7 @@ class PreviewControl:
 
         self.cnt = 1
         #Jarak dari Hip ke CoM
-        self.hip_offset = 0.0385 + self.com_swing # 
+        self.hip_offset = 0.0385 + self.com_swing
 
         #Prediksi State
         self.x = np.matrix(np.zeros(3)).T
@@ -75,7 +75,7 @@ class PreviewControl:
         self.py_ref = []
 
         #Foot Step (Kenapa Butuh 3)
-        #Foot step ini yang selalu di append dan pop di fungsi update_footstep() 
+        #Foot step ini yang selalu di append dan pop di fungsi update_footstep()
         self.footstep = [[0.0, -self.hip_offset],
                          [0.0, self.hip_offset],
                          [0.0, -self.hip_offset]]
@@ -83,7 +83,7 @@ class PreviewControl:
         self.support_foot = -1
 
         self.com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
-        self.v_com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
+        self.com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
         self.l_foot_pose = np.matrix([0.0, self.hip_offset, 0.0], dtype=float)
         self.r_foot_pose = np.matrix([0.0, -self.hip_offset, 0.0], dtype=float)
         self.cur_l_foot_pose = np.matrix([0.0, self.hip_offset, 0.0], dtype=float)
@@ -109,12 +109,12 @@ class PreviewControl:
         # Walking Timing Pzrameter
         self.t_step = 0.3
         self.dsp_ratio = 0.1
-        self.t_dsp = self.dsp_ratio * self.t_step # 0.03
-        self.t_ssp = (1.0 - self.dsp_ratio) * self.t_step # (1.0 - 0.1) * 0.3 = 0.27
+        self.t_dsp = self.dsp_ratio * self.t_step
+        self.t_ssp = (1.0 - self.dsp_ratio) * self.t_step
         self.t = 0.0
 
         self.t_bez = 0.0
-        self.dt_bez = 1 / (self.t_ssp / self.dt) # 0.037
+        self.dt_bez = 1 / (self.t_ssp / self.dt)
 
         # 0 : DSP, 1 : SSP
         self.walking_phase = 0
@@ -132,7 +132,7 @@ class PreviewControl:
             Parameter waktu yang diinisiasi dengan nilai 0.0 dan akan melakukan increment sebesar self.dt (self.dt = 0.01)
         self.support_foot : int
             Nilai yang digunakan untuk merepresentasikan kaki kiri (1) dan kaki kanan (-1)
-
+        
         *********
         ADDITIONAL
         self.p_start, self.p_end, self.p_cnt digunakan dalam fungsi update_footstep(), menghasilkan path yang disimpan dalam
@@ -237,7 +237,7 @@ class PreviewControl:
                 self.cur_r_foot_pose[0, 1] = -self.footstep[0][1]
                 self.cur_r_foot_pose[0, 2] = 0
 
-                # self.update_foot_path() menghasilkan matriks 1x3, berisi posisi x y z 
+                # self.update_foot_path() menghasilkan matriks 1x3, berisi posisi x y z
                 self.l_foot_pose = self.update_foot_path()
         # perbedaan pada self.l_foot_pose hanya pada nilai y ([0, 1]) nya, dimana y bernilai konstan : 0.154, 
         # sedangkan self.foot_y bernilai konstan : 
@@ -275,7 +275,7 @@ class PreviewControl:
         path : matrix
             -> Beranggotakan matriks 1x3
             Merupakan hasil dari fungsi yang memberikan posisi x y z bezier curve
-
+        
         """
         # self.t_bez tidak boleh melebihi 1 karena rumus bezier 3 dimensi maksimal t = 1
         # kalo bingung lihat di troubleshooting_documentation, number 3
@@ -363,7 +363,7 @@ class PreviewControl:
                 self.footstep.append([dx, dy])
 
             self.swap_support_foot()
-        
+
         if self.cnt % int(self.t_step / self.dt) == 1 or self.cnt / int(self.t_step / self.dt) == 0:
             self.x0 = self.x
             self.y0 = self.y
@@ -389,7 +389,7 @@ class PreviewControl:
             Digunakan untuk menyimpan dan append nilai self.footstep([0][0]) (zmp x)
         self.py_ref : list array
             Digunakan untuk menyimpan dan append nilai self.footstep([0][1]) (zmp y)
-
+       
         """
         # Perbaharui Trajektori Kaki
         self.update_foot_trajectory()
@@ -427,7 +427,7 @@ class PreviewControl:
         xe : float
             Nilai yang disimpan : (self.px_ref[0] - self.C * self.x)
         """
-
+        
         #Perbaharui Trajektori CoM
         xe = self.px_ref[0] - self.C * self.x
         ye = self.py_ref[0] - self.C * self.y
@@ -457,7 +457,7 @@ class PreviewControl:
             self.one_step = False
 
         self.com_pose[0,0], self.com_pose[0,1], self.com_pose[0,2] = self.x[0,0] + self.x_offset, self.y[0,0], self.zc
-
+        
         if(not self.first):
             self.com_pose -= 0.0065
     def update_walking_pattern(self):

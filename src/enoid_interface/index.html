@@ -13,7 +13,7 @@
     <script type="text/javascript" type="text/javascript">
         // INIT
         let ros = new ROSLIB.Ros({
-            url: "ws://192.168.137.117:9090",
+            url: "ws://192.168.137.93:9090",
         });
 
         ros.on("connection", function () {
@@ -115,7 +115,7 @@
                 y: Number(document.)
             })
         }
-
+        
         function calibrate_status() {
             let calibrate_msg = new ROSLIB.Message({
                 data: true,
@@ -166,7 +166,7 @@
                                 <td colspan="3">
                                     <label for="cmd_x">CMD X </label>
                                     <input type="number" step="0.001" name="cmd_x" id="cmd_x" class="Input"
-                                        value="0.05" />
+                                        value="0.025" />
                                 </td>
                             </tr>
                             <tr>
@@ -223,7 +223,7 @@
                             </tr>
                             <tr>
                                 <td>
-                                    <label for="roll_d">KD ROLL </label>
+                                    <label for="roll_d">KI PITCH </label>
                                     <input type="number" step="0.001" name="roll_d" id="roll_d" class="Input"
                                         value="0.00" />
                                 </td>

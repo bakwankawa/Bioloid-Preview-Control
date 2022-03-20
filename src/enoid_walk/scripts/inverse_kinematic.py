@@ -42,10 +42,9 @@ class InverseKinematic:
         # kajita hal 51.
         # Dapat dilihat bahwa R_COM itu inginnya jalan bentuk lurus terus (ideal), tapi biar agak bungkuk dikit, pitch nya
         # diatur supaya bisa agak menunduk atau sebaliknya
-
+        
         # Diatur q3-q7 untuk atur offset tunner 
         R_COM = self.Rz(.0) * self.Ry(self.TILT*np.pi/180) * self.Rx(.0)
-        
 
         p_COM_FOOT = p_COM - p_FOOT
         
