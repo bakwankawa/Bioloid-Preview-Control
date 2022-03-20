@@ -1,7 +1,8 @@
 #! /usr/bin/python3
 
 import rospy
-from geometry_msgs.msg import Vector3
+from geometry_msgs.msg import Vector3, Twist
+from std_msgs.msg import Int32, Bool
 
 from inverse_kinematic import *
 from servo_controller import *
@@ -33,7 +34,27 @@ def bezier_curve_4D(phase, p1, p2, p3, p4):
 ori_data = np.array([.0, .0, .0])
 gyr_data = np.array([.0, .0, .0])
 
+FOOT_DISTANCE = 6.5 / 1000
+COM_HEIGHT = 230 / 1000
+X_OFFSET = 5 / 1000
+COM_SWING = 115.5 / 1000
+COM = np.matrix([X_OFFSET, 0.0, COM_HEIGHT])
+LEFT = np.matrix([0.0, 38.5 / 1000 + FOOT_DISTANCE, 0.0])
+RIGHT = np.matrix([0.0, -38.5 / 1000 - FOOT_DISTANCE, 0.0])
+
+
 igl_data = 0.0
+
+cmd_vel = Vector3()
+gain_ctrl = Twist()
+feedback_mode = Int32()
+walk_mode = Int32()
+walk_cmd = Int32()
+push_data = Bool()
+com_msg = Vector3()
+
+finish = False
+step = False
 
 def ori_callback(msg):
     ori_data[0] = msg.x
@@ -44,6 +65,38 @@ def gyr_callback(msg):
     gyr_data[0] = msg.x
     gyr_data[1] = msg.y
 
+def vel_callback(msg):
+    cmd_vel = msg
+
+def walk_mode_callback(msg):
+    global walk_mode
+    walk_mode = msg
+
+def cmd_callback(msg):
+    global walk_cmd
+    walk_cmd = msg
+
+def feedback_callback(msg):
+    global feedback_mode
+    feedback_mode = msg
+
+def gain_callback(msg):
+    global gain_ctrl
+    gain_ctrl = msg
+
+def stand(ik):
+    global JOINTS, finish, step, delta_step, COM, LEFT, RIGHT,  com_msg
+    COM = np.matrix([X_OFFSET, 0.0, COM_HEIGHT])
+    LEFT = np.matrix([0.0, 38.5 / 1000 + FOOT_DISTANCE, 0.0])
+    RIGHT = np.matrix([0.0, -38.5 / 1000 - FOOT_DISTANCE, 0.0])
+    JOINTS = ik.solve(COM, LEFT, RIGHT)
+    finish = False
+    step = False
+    delta_step = 0.0
+    com_msg.x = COM[0,0]
+    com_msg.y = COM[0,1]
+    com_msg.z = COM[0,2]
+
 igl_data_roll = 0.0
 
 def main():
@@ -51,6 +104,8 @@ def main():
     rospy.init_node('enoid_terrain', anonymous=False)
     rospy.Subscriber("ori_data", Vector3, ori_callback)
     rospy.Subscriber("gyr_data", Vector3, gyr_callback)
+    rospy.Subscriber("feedback_status", Int32, feedback_callback)
+    rospy.Subscriber("gain_control", Twist, gain_callback)
     com_pub = rospy.Publisher('com_data', Vector3, queue_size=1)
     rate = rospy.Rate(30)
 
@@ -92,6 +147,7 @@ def main():
             time_start = rospy.Time.now().to_sec()
             phase = 0
             if state == 25 :
+                finish = True
                 break
             state = state + 1
 
@@ -303,24 +359,28 @@ def main():
         
         JOINTS = ik.solve(COM,LEFT, RIGHT)
 
-        K = np.array([-0.04, -0.05])#gain proposional, gain derivatife (pitch)0.06, 0.01
-        Kr = np.array([-0.085, -0.06])#gain proposional, gain derivatife (roll)0.06, 0.06    -0.065, -0.05
-        igl_data_roll += ori_data[0]
+        #K = np.array([-0.04, -0.05])#gain proposional, gain derivatife (pitch)0.06, 0.01
+        #Kr = np.array([-0.085, -0.06])#gain proposional, gain derivatife (roll)0.06, 0.06    -0.065, -0.05
+        #igl_data_roll += ori_data[0]
         #Kr = np.array([0.04, 0.05])
         #K = np.array([0.04, 0.1])
+        if ((feedback_mode.data == 1) or (feedback_mode.data == 2)) and not(finish):
+            igl_data[1] +=  ori_data[1]/30
+            #delta_pitch = K[0] * ori_data[1] + K[1] * -gyr_data[1]
+            #delta_roll = Kr[0] * ori_data[0] + Kr[1] * -gyr_data[0]
+            delta_roll = gain_ctrl.linear.x * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
+            delta_pitch = -gain_ctrl.linear.y * ori_data[1] + -gain_ctrl.angular.y * gyr_data[1] + gain_ctrl.angular.x * igl_data[1]
+            print((delta_roll * 180/np.pi))
+            JOINTS[3] += delta_pitch
+            JOINTS[8] -= delta_pitch 
 
-        delta_pitch = K[0] * ori_data[1] + K[1] * -gyr_data[1]
-        delta_roll = Kr[0] * ori_data[0] + Kr[1] * -gyr_data[0]
-       
-        print((delta_roll * 180/np.pi))
-        JOINTS[3] += delta_pitch
-        JOINTS[8] -= delta_pitch 
+            JOINTS[4] += delta_roll
+            JOINTS[9] -= delta_roll
 
-        #JOINTS[4] += delta_roll
-        #JOINTS[9] -= delta_roll
+            #JOINTS[4] += (delta_roll + ((0*math.pi)/180))
+            #JOINTS[9] -= (delta_roll - ((0*math.pi)/180))
 
-        JOINTS[4] += (delta_roll + ((0*math.pi)/180))
-        JOINTS[9] -= (delta_roll - ((0*math.pi)/180))
+        
 
         sc.sync_write_pos(JOINTS )#* AXIS
 
