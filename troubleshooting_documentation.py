@@ -18,4 +18,13 @@
     A: P = (1−t)^2P1 + 2(1−t)tP2 + t^2P3
     S: https://javascript.info/bezier-curve
        https://towardsdatascience.com/b%C3%A9zier-curve-bfffdadea212 eq.6
+
+4.  Q: Ip mikael@ip
+    A: ssh mikael@192.168.137.154
+       ssh mikael@192.168.137.93
+
+5.  Q: Kill Process socket ip
+    A: lsof -i :8000
+        -> sudo kill [idprocess]
+    S: https://stackoverflow.com/questions/17780291/python-socket-error-errno-98-address-already-in-use
 """
