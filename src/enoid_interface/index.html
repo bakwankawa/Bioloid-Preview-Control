@@ -70,6 +70,12 @@
             messageType: "geometry_msgs/Twist",
         });
 
+        let offset_pub = new ROSLIB.Topic({
+            ros: ros,
+            name: "offset_param",
+            messageType: "geometry_msgs/Vector3",
+        });
+
         function walk_status(status) {
             let status_msg = new ROSLIB.Message({
                 data: status,
@@ -103,6 +109,13 @@
             cntrl_pub.publish(cntrl_msg);
         }
 
+        function param_offset() {
+            let param_msg = new ROSLIB.Message({
+                x: Number(document.getElementById("hip_pitch").value),
+                y: Number(document.)
+            })
+        }
+        
         function calibrate_status() {
             let calibrate_msg = new ROSLIB.Message({
                 data: true,

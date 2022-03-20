@@ -38,6 +38,12 @@ class InverseKinematic:
         p_FOOT = LEG.T
         R_FOOT = self.Rz(.0) * self.Ry(.0) * self.Rx(.0)
         p_COM = COM.T
+
+        # kajita hal 51.
+        # Dapat dilihat bahwa R_COM itu inginnya jalan bentuk lurus terus (ideal), tapi biar agak bungkuk dikit, pitch nya
+        # diatur supaya bisa agak menunduk atau sebaliknya
+        
+        # Diatur q3-q7 untuk atur offset tunner 
         R_COM = self.Rz(.0) * self.Ry(self.TILT*np.pi/180) * self.Rx(.0)
 
         p_COM_FOOT = p_COM - p_FOOT
@@ -79,6 +85,11 @@ class InverseKinematic:
         q3 = np.arctan2(R[2, 1], (-R[0, 1] * sz + R[1, 1] * cz))
         q4 = np.arctan2(-R[2, 0], R[2, 2])
 
+        # q3 : hip roll
+        # q4 : hip pitch
+        # q5 : knee
+        # q6 : ankle pitch
+        # q7 : ankle roll
         return np.array([q3, q4, q5, q6, q7])
 
     def solve(self, COM, LEFT, RIGHT):
