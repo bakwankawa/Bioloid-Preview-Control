@@ -92,6 +92,17 @@ h4{
   padding: 20px;
 }
 
+.Offset{
+  background-color:rgb(33, 46, 74);
+  color: white;
+  border-style: solid;
+  border-width: 2px;
+  border-color: rgb(33, 46, 74);
+  border-radius: 25px;
+  vertical-align: 0%;
+  padding: 20px;
+}
+
 .Walking_Content{
   padding: 30px 0px 15px 0px;
   border-spacing: 10px;
@@ -118,6 +129,13 @@ h4{
   border-spacing: 10px;
   width: 100%;
   text-align: left;
+}
+
+.Offset_Content{
+  padding: 15px 0px 15px 0px;
+  border-spacing: 10px;
+  width: 100%;
+  text-align: center;
 }
 
 .Start_Button{
@@ -238,4 +256,40 @@ h4{
   font-size: 16px;
   width: 50%;
   border-radius: 20px;
+}
+
+.Apply_Offset{
+  background-color: rgb(45, 164, 78);
+  color: white;
+  border: none;
+  padding: 10px;
+  font-size: 16px;
+  width: 100%;
+  border-radius: 20px;
+}
+
+.Apply_Offset:hover{
+  opacity: 0.9;
+}
+
+.Apply_Offset:active{
+  opacity: 0.8;
+}
+
+.Reset_Offset{
+  background-color: rgb(153, 29, 29);
+  color: white;
+  border: none;
+  padding: 10px;
+  font-size: 16px;
+  width: 100%;
+  border-radius: 20px;
+}
+
+.Reset_Offset:hover{
+  opacity: 0.9;
+}
+
+.Reset_Offset:active{
+  opacity: 0.8;
 }

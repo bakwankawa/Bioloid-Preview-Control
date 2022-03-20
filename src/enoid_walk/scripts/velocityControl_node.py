@@ -49,16 +49,13 @@ def ori_callback(msg):
     ori_data[0] = msg.x
     ori_data[1] = msg.y 
 
-
 def gyr_callback(msg):
     gyr_data[0] = msg.x 
     gyr_data[1] = msg.y
 
-
 def vel_callback(msg):
     global cmd_vel
     cmd_vel = msg
-
 
 def cmd_callback(msg):
     global walk_cmd
@@ -68,7 +65,6 @@ def cmd_callback(msg):
 def walk_mode_callback(msg):
     global walk_mode
     walk_mode = msg
-
 
 def feedback_callback(msg):
     global feedback_mode
@@ -81,6 +77,14 @@ def gain_callback(msg):
 def push_callback(msg):
     global push_data
     push_data = msg
+
+def offset_status_callback(msg):
+    global offset_status
+    offset_status = msg
+
+def offset_callback(msg):
+    global offset_param
+    offset_param = msg
 
 def bezier_curve(phase, p_start, p_cnt, p_end):
     if(phase >= 1):
@@ -235,6 +239,8 @@ def main():
     rospy.Subscriber("feedback_status", Int32, feedback_callback)
     rospy.Subscriber("gain_control", Twist, gain_callback)
     rospy.Subscriber("push_data", Bool, push_callback)
+    rospy.Subscriber("offset_status", Int32, offset_status_callback)
+    rospy.Subscriber("offset_param", Twist, offset_callback)
     com_pub = rospy.Publisher('com_data', Vector3, queue_size=1)
 
     rate = rospy.Rate(30)
@@ -245,6 +251,10 @@ def main():
     fz = FuzzyLogic()
     
     stand(ik)
+
+    # param untuk simpan offset awal ankle and hip pitch
+    temp_offset_hip = ik.q4
+    temp_offset_ankle = ik.q6
 
     rospy.loginfo("E-NOID WALK")
 
@@ -258,8 +268,19 @@ def main():
 
         elif walk_cmd.data == 1:
 
+            # ganti parameter v dari websocket
             pc.cmd_x = cmd_vel.x
             # rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
+
+            # function untuk tunning offset hip and ankle pitch
+            # x: hip pitch (q4), y: ankle pitch (q6)
+            if offset_status.data == 1:
+                ik.q4 = temp_offset_hip + (offset_param.x * np.pi / 180)
+                ik.q6 = temp_offset_ankle + (offset_param.y * np.pi / 180)
+            else:
+                ik.q4 = temp_offset_hip
+                ik.q6 = temp_offset_ankle
+            rospy.loginfo("hip_pitch: %s, ankle_pitch: %s", str(ik.q4, ik.q6))
 
             if walk_mode.data == 1 and (feedback_mode.data == 2):
                 ik.TILT = 15

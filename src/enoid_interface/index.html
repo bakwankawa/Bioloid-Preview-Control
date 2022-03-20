@@ -70,11 +70,17 @@
             messageType: "geometry_msgs/Twist",
         });
 
-        // let offset_pub = new ROSLIB.Topic({
-        //     ros: ros,
-        //     name: "offset_param",
-        //     messageType: "geometry_msgs/Vector3",
-        // });
+        let offset_status_pub = new ROSLIB.Topic({
+            ros: ros,
+            name: "offset_status",
+            messageType: "std_msgs/Int32"
+        })
+
+        let offset_pub = new ROSLIB.Topic({
+            ros: ros,
+            name: "offset_param",
+            messageType: "geometry_msgs/Vector3",
+        });
 
         function walk_status(status) {
             let status_msg = new ROSLIB.Message({
@@ -109,14 +115,30 @@
             cntrl_pub.publish(cntrl_msg);
         }
 
-        // function param_offset() {
-        //     let param_msg = new ROSLIB.Message({
-        //         x: Number(document.getElementById("hip_pitch").value),
-        //         y: Number(document.getElementById("ankle_pitch").value),
-        //     });
+        function param_offset(status) {
+            let offset_status_msg = new ROSLIB.Message({
+                data: status,
+            });
 
-        //     offset_pub.publish(param_msg);
-        // }
+            let param_msg = new ROSLIB.Message({
+                x: Number(document.getElementById("hip_pitch").value),
+                y: Number(document.getElementById("ankle_pitch").value),
+            });
+
+            let reset_param_msg = new ROSLIB.Message({
+                x = 0.0,
+                y = 0.0,
+            });
+
+            offset_status_pub.publish(offset_status_msg)
+
+            if (status == 1){
+                offset_pub.publish(param_msg);
+            }
+            elif (status == 0){
+                offset_pub.publish(reset_param_msg);
+            }
+        }
         
         function calibrate_status() {
             let calibrate_msg = new ROSLIB.Message({
@@ -241,7 +263,7 @@
                         </table>
                     </div>
                 </td>
-                <td class="Log" rowspan="2">
+                <td class="Log">
                     <div>
                         <table>
                             <tr>
@@ -262,7 +284,7 @@
                                         document.getElementById("log_area").scrollTop = document.getElementById("log_area").scrollHeight
                                     });
                                 </script>
-                                <textarea class="Log_Area" name="log_area" id="log_area" cols="60" rows="20"></textarea>
+                                <textarea class="Log_Area" name="log_area" id="log_area" cols="60" rows="10"></textarea>
                             </tr>
                             <tr>
                                 <button type="button" id="record" class="Record_Button" onclick="record_status()">
@@ -307,6 +329,39 @@
                         </table>
                     </div>
                 </td>
+                <td class="Offset">
+                    <div>
+                        <h2>OFFSET</h2>
+                        <table class="Offset_Content">
+                            <tr>
+                                <td colspan="3">
+                                    <label for="hip_pitch">HIP PITCH</label>
+                                    <input type="number" step="0.1" name="hip_pitch" id="hip_pitch" class="Input"
+                                        value="0.0" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="3">
+                                    <label for="ankle_pitch">ANKLE PITCH</label>
+                                    <input type="number" step="0.1" name="ankle_pitch" id="ankle_pitch" class="Input"
+                                        value="0.0" />
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <button type="button" id="apply_offset" class="Apply_Offset" onclick="param_offset(1)">
+                                        APPLY
+                                    </button>
+                                </td>
+                                <td>
+                                    <button type="button" id="reset_offset" class="Reset_Offset" onclick="param_offset(0)">
+                                        RESET
+                                    </button>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </td>
                 <td class="Mode">
                     <div>
                         <h2>MODE</h2>
@@ -331,11 +386,6 @@
                         </table>
                     </div>
                 </td>
-                <!-- <td class="Offset">
-                    <div>
-
-                    </div>
-                </td> -->
             </tr>
         </table>
     </div>
