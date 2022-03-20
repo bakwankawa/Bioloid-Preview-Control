@@ -27,4 +27,7 @@
     A: lsof -i :8000
         -> sudo kill [idprocess]
     S: https://stackoverflow.com/questions/17780291/python-socket-error-errno-98-address-already-in-use
+
+6.  Q: How to activate virtual env
+    A: run Scripts/Activate.ps1
 """

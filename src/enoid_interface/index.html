@@ -70,11 +70,11 @@
             messageType: "geometry_msgs/Twist",
         });
 
-        let offset_pub = new ROSLIB.Topic({
-            ros: ros,
-            name: "offset_param",
-            messageType: "geometry_msgs/Vector3",
-        });
+        // let offset_pub = new ROSLIB.Topic({
+        //     ros: ros,
+        //     name: "offset_param",
+        //     messageType: "geometry_msgs/Vector3",
+        // });
 
         function walk_status(status) {
             let status_msg = new ROSLIB.Message({
@@ -109,12 +109,14 @@
             cntrl_pub.publish(cntrl_msg);
         }
 
-        function param_offset() {
-            let param_msg = new ROSLIB.Message({
-                x: Number(document.getElementById("hip_pitch").value),
-                y: Number(document.)
-            })
-        }
+        // function param_offset() {
+        //     let param_msg = new ROSLIB.Message({
+        //         x: Number(document.getElementById("hip_pitch").value),
+        //         y: Number(document.getElementById("ankle_pitch").value),
+        //     });
+
+        //     offset_pub.publish(param_msg);
+        // }
         
         function calibrate_status() {
             let calibrate_msg = new ROSLIB.Message({
@@ -329,6 +331,11 @@
                         </table>
                     </div>
                 </td>
+                <!-- <td class="Offset">
+                    <div>
+
+                    </div>
+                </td> -->
             </tr>
         </table>
     </div>
