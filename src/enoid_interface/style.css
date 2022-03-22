@@ -258,6 +258,16 @@ h4{
   border-radius: 20px;
 }
 
+.Font{
+  background-color: rgb(27, 7, 7);
+  color: rgb(33, 46, 74);
+  border: none;
+  padding: 5px;
+  font-size: 5px;
+  width: 50%;
+  border-radius: 20px;
+}
+
 .Apply_Offset{
   background-color: rgb(45, 164, 78);
   color: white;

@@ -30,4 +30,12 @@
 
 6.  Q: How to activate virtual env
     A: run Scripts/Activate.ps1
+
+7.  Q: Kegunaan kalman filter pada IMU
+    A: memproduksi estimasi state sistem sebagai rata-rata prediksi state sistem.
+        rata-rata ini digunakan sebagai perhitungan baru
+
+8   Q: Fungsi dioda penyearah pada board
+    A: menjadi penghamba arus dari arah sebaliknya, ex: servo gerak menghasilkan arus,
+        harus ditahan klo misal over current bisa merusak part lain
 """
