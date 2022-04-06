@@ -20,6 +20,8 @@ walk_mode = Int32()
 walk_cmd = Int32()
 push_data = Bool()
 com_msg = Vector3()
+offset_status = Int32()
+offset_param = Vector3()
 
 FOOT_DISTANCE = 6.5 / 1000
 COM_HEIGHT = 230 / 1000
@@ -229,7 +231,7 @@ def final_test(pc, fz, ik):
             com_msg.z = COM[0,2]
 
 def main():
-    global X_OFFSET, COM, com_msg, cmd_vel
+    global X_OFFSET, COM, com_msg, cmd_vel, offset_param
     rospy.init_node('velocityControl_walk', anonymous=False)
     rospy.Subscriber("ori_data", Vector3, ori_callback)
     rospy.Subscriber("gyr_data", Vector3, gyr_callback)
@@ -252,13 +254,17 @@ def main():
     
     stand(ik)
 
-    # param untuk simpan offset awal ankle and hip pitch
-    temp_offset_hip = ik.q4
-    temp_offset_ankle = ik.q6
-
     rospy.loginfo("E-NOID WALK")
 
     while not rospy.is_shutdown():
+
+        # ganti parameter v dari websocket
+        pc.cmd_x = cmd_vel.x
+        # rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
+
+        # tunning offset robot
+        ik.hip_offset = offset_param.x * np.pi / 180
+        ik.ankle_offset = offset_param.y * np.pi / 180
         
         if walk_cmd.data == -1:
 
@@ -267,20 +273,6 @@ def main():
             stand(ik)
 
         elif walk_cmd.data == 1:
-
-            # ganti parameter v dari websocket
-            pc.cmd_x = cmd_vel.x
-            # rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
-
-            # function untuk tunning offset hip and ankle pitch
-            # x: hip pitch (q4), y: ankle pitch (q6)
-            if offset_status.data == 1:
-                ik.q4 = temp_offset_hip + (offset_param.x * np.pi / 180)
-                ik.q6 = temp_offset_ankle + (offset_param.y * np.pi / 180)
-            else:
-                ik.q4 = temp_offset_hip
-                ik.q6 = temp_offset_ankle
-            rospy.loginfo("hip_pitch: %s, ankle_pitch: %s", str(ik.q4, ik.q6))
 
             if walk_mode.data == 1 and (feedback_mode.data == 2):
                 ik.TILT = 15

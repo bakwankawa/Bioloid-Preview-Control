@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+from numpy import append
 from dynamixel_sdk import *                    
 
 class ServoController:
@@ -13,14 +14,21 @@ class ServoController:
         self.ADDR_TORQUE_ENABLE = 24
         self.TORQUE_ENABLE = 1
         self.BAUDRATE = 1000000
+        self.PROTOCOL_VERSION = 1
 
         self.portHandler = PortHandler("/dev/ttyUSB0")
         self.packetHandler = PacketHandler(1.0)
 
         self.groupSyncWrite = GroupSyncWrite(self.portHandler, self.packetHandler, self.ADDR_GOAL_POSITION, self.LEN_AX_GOAL_POSITION)
+        # self.groupSyncRead = GroupSyncRead(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
+        # self.partialSyncRead = read2ByteTxRx(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
+
         
         self.param_goal_position = [0 for i in range(len(self.JOINT))]
         self.JOINT_INIT = [508, 512, 512, 512, 508, 506, 512, 512, 512, 520]
+
+        # Coba read data posisi servo
+        self.present_position = []
 
         # OPEN PORT
         if not self.portHandler.openPort():
@@ -77,7 +85,20 @@ class ServoController:
 
         #CLEAR PARAM
         self.groupSyncWrite.clearParam()
-    
+
+    def sync_read_pos(self):
+        # Nanti dipanggil tiap satu langkah
+        for id in range(len(self.JOINT)):
+            if len(present_position) <= id:
+                present_position.append(read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION)
+            else:
+                present_position[id] = read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION)
+                
+            if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
+                printTxRxResult(self.PROTOCOL_VERSION, getLastTxRxResult(self.portHandler, self.PROTOCOL_VERSION))
+            elif getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
+                printRxPacketError(self.PROTOCOL_VERSION, getLastRxPacketError(self.portHandler, self.PROTOCOL_VERSION))
+
     def dec2bin(self, value, id):
         goal = self.JOINT_INIT[id] - int(value * 1023/5.23599)
 

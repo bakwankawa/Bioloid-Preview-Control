@@ -10,7 +10,9 @@ class InverseKinematic:
         self.KNEE_ANKLE = 97 / 1000
         self.ANKLE_FOOT = 32.5 / 1000
         self.TILT = 10
-
+        
+        self.ankle_offset = 0.0
+        self.hip_offset = 0.0
 
     def Rx(self, theta):
         return np.matrix([[1, 0, 0],
@@ -76,14 +78,14 @@ class InverseKinematic:
         elif q7 < -np.pi / 2:
             q7 += np.pi
 
-        q6 = -np.arctan2(r[0, 0], np.sign(r[2, 0]) * np.sqrt(r[1, 0] ** 2 + r[2, 0] ** 2)) - alpha
+        q6 = -np.arctan2(r[0, 0], np.sign(r[2, 0]) * np.sqrt(r[1, 0] ** 2 + r[2, 0] ** 2)) - alpha + self.ankle_offset
 
         R = R_COM.T * R_FOOT * self.Rx(-q7) * self.Ry(-q6 - q5)
         q2 = np.arctan2(-R[0, 1], R[1, 1])
         cz = np.cos(q2)
         sz = np.sin(q2)
         q3 = np.arctan2(R[2, 1], (-R[0, 1] * sz + R[1, 1] * cz))
-        q4 = np.arctan2(-R[2, 0], R[2, 2])
+        q4 = np.arctan2(-R[2, 0], R[2, 2]) + self.hip_offset
 
         # q3 : hip roll
         # q4 : hip pitch

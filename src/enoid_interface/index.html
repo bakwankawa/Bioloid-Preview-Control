@@ -74,7 +74,7 @@
             ros: ros,
             name: "offset_status",
             messageType: "std_msgs/Int32"
-        })
+        });
 
         let offset_pub = new ROSLIB.Topic({
             ros: ros,
@@ -126,8 +126,8 @@
             });
 
             let reset_param_msg = new ROSLIB.Message({
-                x = 0.0,
-                y = 0.0,
+                x: 0.0,
+                y: 0.0,
             });
 
             offset_status_pub.publish(offset_status_msg)
@@ -135,7 +135,7 @@
             if (status == 1){
                 offset_pub.publish(param_msg);
             }
-            elif (status == 0){
+            else{
                 offset_pub.publish(reset_param_msg);
             }
         }
