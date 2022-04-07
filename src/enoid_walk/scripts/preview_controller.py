@@ -4,6 +4,11 @@ import scipy.linalg as la
 import matplotlib.pyplot as plt
 from pytransform3d.trajectories import *
 
+# from enoid_walk.scripts.inverse_kinematic import InverseKinematic
+from preview_controller import *
+from inverse_kinematic import *
+from forward_kinematic import *
+
 debug = 1
 
 class PreviewControl:
@@ -83,7 +88,7 @@ class PreviewControl:
         self.support_foot = -1
 
         self.com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
-        self.com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
+        self.v_com_pose = np.matrix([0.0, 0.0, 0.0], dtype=float)
         self.l_foot_pose = np.matrix([0.0, self.hip_offset, 0.0], dtype=float)
         self.r_foot_pose = np.matrix([0.0, -self.hip_offset, 0.0], dtype=float)
         self.cur_l_foot_pose = np.matrix([0.0, self.hip_offset, 0.0], dtype=float)
@@ -120,6 +125,9 @@ class PreviewControl:
         self.walking_phase = 0
 
         self.walking_ready = False
+
+        # custom for fk
+        self.com_trajectory = []
 
     def update_foot_trajectory(self):
         """
@@ -534,7 +542,7 @@ class PreviewControl:
         
         """
 
-        t_sim = 8
+        t_sim = 3
         t = 0
         com_x = []
         com_y = []
@@ -557,49 +565,74 @@ class PreviewControl:
 
             com_trajectory.append([self.x[0, 0],self.y[0, 0],0.19,0,0,0,0])
 
+            print(com_trajectory)
+
             r_trajectory.append([self.r_foot[0,0], self.r_foot[0,1], self.r_foot[0,2],0,0,0,0])
             l_trajectory.append([self.l_foot[0,0], self.l_foot[0,1], self.l_foot[0,2],0,0,0,0])
-            if self.one_step:
-                print("V_x_CoM: {}, V_y_CoM: {}, V_z_CoM: {}".format(self.v_com_pose[0,0], self.v_com_pose[0,1],
-                self.v_com_pose[0,2]))
+            # if self.one_step:
+            #     print("V_x_CoM: {}, V_y_CoM: {}, V_z_CoM: {}".format(self.v_com_pose[0,0], self.v_com_pose[0,1],
+            #     self.v_com_pose[0,2]))
 
-        if debug:
+        # if debug:
 
-            plt.figure(0)
-            plt.plot(px)
-            plt.plot(com_x)
+        #     plt.figure(0)
+        #     plt.plot(px)
+        #     plt.plot(com_x)
 
-            plt.figure(1)
-            plt.plot(py)
-            plt.plot(com_y)
+        #     plt.figure(1)
+        #     plt.plot(py)
+        #     plt.plot(com_y)
 
-            plt.figure(2)
-            plt.plot(com_x,com_y)
-            plt.plot(px, py)
+        #     plt.figure(2)
+        #     plt.plot(com_x,com_y)
+        #     plt.plot(px, py)
 
-            fig = plt.figure(3)
-            ax = fig.add_subplot(111, projection='3d')
-            ax.set_xlim3d(-0.1, 0.5)
-            ax.set_ylim3d(-0.1, 0.5)
-            ax.set_zlim3d(0, 0.2)
+        #     fig = plt.figure(3)
+        #     ax = fig.add_subplot(111, projection='3d')
+        #     ax.set_xlim3d(-0.1, 0.5)
+        #     ax.set_ylim3d(-0.1, 0.5)
+        #     ax.set_zlim3d(0, 0.2)
 
-            com_trajectory = np.array(com_trajectory)
-            l_trajectory = np.array(l_trajectory)
-            r_trajectory = np.array(r_trajectory)
+        #     com_trajectory = np.array(com_trajectory)
+        #     l_trajectory = np.array(l_trajectory)
+        #     r_trajectory = np.array(r_trajectory)
 
-            plot_trajectory(ax=ax, P=com_trajectory, s=0.02, show_direction=False)
-            plot_trajectory(ax=ax, P=r_trajectory,  s=0.02, show_direction=False)
-            plot_trajectory(ax=ax, P=l_trajectory,  s=0.02, show_direction=False)
+        #     plot_trajectory(ax=ax, P=com_trajectory, s=0.02, show_direction=False)
+        #     plot_trajectory(ax=ax, P=r_trajectory,  s=0.02, show_direction=False)
+        #     plot_trajectory(ax=ax, P=l_trajectory,  s=0.02, show_direction=False)
 
-            plt.show()
+        #     plt.show()
 
 def main():
+    # FOOT_DISTANCE = 6.5 / 1000
+    # COM_HEIGHT = 230 / 1000
+    # X_OFFSET = 5 / 1000
+    # COM_SWING = 115.5 / 1000
+    # pc = PreviewControl(COM_HEIGHT, COM_SWING, X_OFFSET, FOOT_DISTANCE)
+    # pc.run()
+
+    # forward kinematic test
     FOOT_DISTANCE = 6.5 / 1000
     COM_HEIGHT = 230 / 1000
     X_OFFSET = 5 / 1000
     COM_SWING = 115.5 / 1000
     pc = PreviewControl(COM_HEIGHT, COM_SWING, X_OFFSET, FOOT_DISTANCE)
-    pc.run()
+    ik = InverseKinematic()
+    robot_model = createENOIDKinematicsModel()
+    robot_model.forwardKinematics()
+
+    time = 3
+    init_time = 0
+    while init_time < time:
+        pc.update_walking_pattern()
+        JOINTS = ik.solve(pc.com_pose, pc.l_foot, pc.r_foot)
+        robot_model.BODY.p = pc.com_pose.T
+        robot_model.setJointAngle(JOINTS)
+        robot_model.forwardKinematics()
+        print(robot_model.L_LEG_J4.p[0])
+        print(robot_model.R_LEG_J4.p[0])
+        init_time += pc.dt
+
 
 if __name__ == "__main__":
     main()
