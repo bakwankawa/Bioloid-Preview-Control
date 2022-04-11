@@ -199,7 +199,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, 2)).T
+    c = np.matrix((0, 0, 0)).T
     link_body = Link("BODY", r.ID.get('NONE'), r.ID.get('NONE'), r.ID.get('L_LEG_J1'), a, b, p, R, m, c)
 
     # ===============left leg================
@@ -224,7 +224,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, -0.25)).T
+    c = np.matrix((0, 0, 0)).T
     link_L_LEG_J3 = Link("L_LEG_J3", r.ID.get('L_LEG_J2'), r.ID.get('NONE'), r.ID.get('L_LEG_J4'), a, b, p, R, m, c)
 
     a = np.matrix((0, 1, 0)).T
@@ -232,7 +232,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, -0.25)).T
+    c = np.matrix((0, 0, 0)).T
     link_L_LEG_J4 = Link("L_LEG_J4", r.ID.get('L_LEG_J3'), r.ID.get('NONE'), r.ID.get('L_LEG_J5'), a, b, p, R, m, c)
 
     a = np.matrix((1, 0, 0)).T      # pastikan sama master
@@ -240,7 +240,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, -0.25)).T
+    c = np.matrix((0, 0, 0)).T
     link_L_LEG_J5 = Link("L_LEG_J5", r.ID.get('L_LEG_J4'), r.ID.get('NONE'), r.ID.get('NONE'), a, b, p, R, m, c)
 
 
@@ -266,7 +266,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, -0.25)).T
+    c = np.matrix((0, 0, 0)).T
     link_R_LEG_J3 = Link("R_LEG_J3", r.ID.get('R_LEG_J2'), r.ID.get('NONE'), r.ID.get('R_LEG_J4'), a, b, p, R, m, c)
 
     a = np.matrix((0, 1, 0)).T
@@ -274,7 +274,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, -0.25)).T
+    c = np.matrix((0, 0, 0)).T
     link_R_LEG_J4 = Link("R_LEG_J4", r.ID.get('R_LEG_J3'), r.ID.get('NONE'), r.ID.get('R_LEG_J5'), a, b, p, R, m, c)
 
     a = np.matrix((1, 0, 0)).T      # gatau
@@ -282,7 +282,7 @@ def createENOIDKinematicsModel():
     p = np.matrix((0.0, 0.0, 0.0)).T
     R = np.matrix(((1, 0, 0), (0, 1, 0), (0, 0, 1)))
     m = 0
-    c = np.matrix((0, 0, -0.25)).T
+    c = np.matrix((0, 0, 0)).T
     link_R_LEG_J5 = Link("L_LEG_J5", r.ID.get('R_LEG_J4'), r.ID.get('NONE'), r.ID.get('NONE'), a, b, p, R, m, c)
 
     robot_model = ENOID_KineticsModel(body=link_body, 

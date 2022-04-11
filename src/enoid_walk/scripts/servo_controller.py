@@ -20,7 +20,7 @@ class ServoController:
         self.packetHandler = PacketHandler(1.0)
 
         self.groupSyncWrite = GroupSyncWrite(self.portHandler, self.packetHandler, self.ADDR_GOAL_POSITION, self.LEN_AX_GOAL_POSITION)
-        # self.groupSyncRead = GroupSyncRead(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
+        self.partialSyncRead = self.packetHandler.read2ByteTxRx(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
         # self.partialSyncRead = read2ByteTxRx(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
 
         
@@ -89,15 +89,19 @@ class ServoController:
     def sync_read_pos(self):
         # Nanti dipanggil tiap satu langkah
         for id in range(len(self.JOINT)):
-            if len(present_position) <= id:
-                present_position.append(read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION)
+            if len(self.present_position) <= id:
+                self.present_position.append(self.packetHandler.read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION))
             else:
-                present_position[id] = read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION)
+                self.present_position[id] = self.packetHandler.read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION)
+
+        for id in range(len(self.JOINT)):
+            print("\nservo ID : {}".format(id))
+            print(self.present_position[id])
                 
-            if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
-                printTxRxResult(self.PROTOCOL_VERSION, getLastTxRxResult(self.portHandler, self.PROTOCOL_VERSION))
-            elif getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
-                printRxPacketError(self.PROTOCOL_VERSION, getLastRxPacketError(self.portHandler, self.PROTOCOL_VERSION))
+            # if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
+            #     printTxRxResult(self.PROTOCOL_VERSION, getLastTxRxResult(self.portHandler, self.PROTOCOL_VERSION))
+            # elif getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
+            #     printRxPacketError(self.PROTOCOL_VERSION, getLastRxPacketError(self.portHandler, self.PROTOCOL_VERSION))
 
     def dec2bin(self, value, id):
         goal = self.JOINT_INIT[id] - int(value * 1023/5.23599)
@@ -108,3 +112,15 @@ class ServoController:
             goal = 0
 
         return int(goal)
+
+def main():
+    sc = ServoController()
+    sc.sync_write_pos(sc.JOINT_INIT)
+    sc.sync_read_pos()
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except:
+        pass

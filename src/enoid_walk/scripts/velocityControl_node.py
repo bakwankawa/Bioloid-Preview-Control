@@ -256,6 +256,8 @@ def main():
 
     rospy.loginfo("E-NOID WALK")
 
+    n = 0
+
     while not rospy.is_shutdown():
 
         # ganti parameter v dari websocket
@@ -306,6 +308,10 @@ def main():
                 JOINTS[9] -= delta_roll
 
         sc.sync_write_pos(JOINTS)
+
+        n += 1
+        if (n%200 == 0):
+            sc.sync_read_pos(JOINTS)
 
         com_pub.publish(com_msg)
         rate.sleep()

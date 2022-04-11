@@ -621,18 +621,26 @@ def main():
     robot_model = createENOIDKinematicsModel()
     robot_model.forwardKinematics()
 
-    time = 3
+    time = 8
     init_time = 0
+    n = 0
     while init_time < time:
         pc.update_walking_pattern()
         JOINTS = ik.solve(pc.com_pose, pc.l_foot, pc.r_foot)
         robot_model.BODY.p = pc.com_pose.T
         robot_model.setJointAngle(JOINTS)
         robot_model.forwardKinematics()
-        print(robot_model.L_LEG_J4.p[0])
-        print(robot_model.R_LEG_J4.p[0])
+        # print(robot_model.L_LEG_J4.p[0])
+        # print(robot_model.R_LEG_J4.p[0])
         init_time += pc.dt
+        n += 1
 
+        if (n == (time/pc.dt)/2):
+            print(robot_model.L_LEG_J4.p[0])
+            print(robot_model.R_LEG_J4.p[0])
+        elif (n == (time/pc.dt)/1):
+            print(robot_model.L_LEG_J4.p[0])
+            print(robot_model.R_LEG_J4.p[0])
 
 if __name__ == "__main__":
     main()
