@@ -1,7 +1,6 @@
 #! /usr/bin/python3
 
-from numpy import append
-from dynamixel_sdk import *                    
+from dynamixel_sdk import *             
 
 class ServoController:
   
@@ -20,15 +19,10 @@ class ServoController:
         self.packetHandler = PacketHandler(1.0)
 
         self.groupSyncWrite = GroupSyncWrite(self.portHandler, self.packetHandler, self.ADDR_GOAL_POSITION, self.LEN_AX_GOAL_POSITION)
-        self.partialSyncRead = self.packetHandler.read2ByteTxRx(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
-        # self.partialSyncRead = read2ByteTxRx(self.portHandler, self.packetHandler, self.AX_PRESENT_POSITION, self.LEN_AX_PRESENT_POSITION)
-
+        # self.partialSyncRead = Protocol1PacketHandler()
         
         self.param_goal_position = [0 for i in range(len(self.JOINT))]
         self.JOINT_INIT = [508, 512, 512, 512, 508, 506, 512, 512, 512, 520]
-
-        # Coba read data posisi servo
-        self.present_position = []
 
         # OPEN PORT
         if not self.portHandler.openPort():
@@ -43,6 +37,9 @@ class ServoController:
 
         #ENABLE JOINT TORQUE
         self.torque_on()
+
+        self.present_position = [None] * 10
+        self.servo_value = []
 
     def ping(self):
         for id in range(len(self.JOINT)):
@@ -87,22 +84,21 @@ class ServoController:
         self.groupSyncWrite.clearParam()
 
     def sync_read_pos(self):
-        # Nanti dipanggil tiap satu langkah
-        for id in range(len(self.JOINT)):
-            if len(self.present_position) <= id:
-                self.present_position.append(self.packetHandler.read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION))
-            else:
-                self.present_position[id] = self.packetHandler.read2ByteTxRx(self.portHandler, self.PROTOCOL_VERSION, self.JOINT[id], self.AX_PRESENT_POSITION)
+        # for id in range(10):
+        #         self.present_position[id] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[id], self.AX_PRESENT_POSITION)
+        self.present_position[4] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[4], self.AX_PRESENT_POSITION)
+        self.present_position[9] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[9], self.AX_PRESENT_POSITION)
+        self.present_position[3] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[3], self.AX_PRESENT_POSITION)
+        self.present_position[8] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[8], self.AX_PRESENT_POSITION)
+        self.present_position[2] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[2], self.AX_PRESENT_POSITION)
+        self.present_position[7] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[7], self.AX_PRESENT_POSITION)
+        self.present_position[1] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[2], self.AX_PRESENT_POSITION)
+        self.present_position[6] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[7], self.AX_PRESENT_POSITION)
+        self.present_position[0] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[2], self.AX_PRESENT_POSITION)
+        self.present_position[5] = self.packetHandler.read2ByteTxRx(self.portHandler, self.JOINT[7], self.AX_PRESENT_POSITION)
 
-        for id in range(len(self.JOINT)):
-            print("\nservo ID : {}".format(id))
-            print(self.present_position[id])
-                
-            # if dynamixel.getLastTxRxResult(port_num, PROTOCOL_VERSION) != COMM_SUCCESS:
-            #     printTxRxResult(self.PROTOCOL_VERSION, getLastTxRxResult(self.portHandler, self.PROTOCOL_VERSION))
-            # elif getLastRxPacketError(port_num, PROTOCOL_VERSION) != 0:
-            #     printRxPacketError(self.PROTOCOL_VERSION, getLastRxPacketError(self.portHandler, self.PROTOCOL_VERSION))
-
+        print(self.present_position)
+    
     def dec2bin(self, value, id):
         goal = self.JOINT_INIT[id] - int(value * 1023/5.23599)
 
@@ -112,15 +108,3 @@ class ServoController:
             goal = 0
 
         return int(goal)
-
-def main():
-    sc = ServoController()
-    sc.sync_write_pos(sc.JOINT_INIT)
-    sc.sync_read_pos()
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except:
-        pass

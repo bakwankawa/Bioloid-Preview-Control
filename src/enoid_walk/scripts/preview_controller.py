@@ -78,6 +78,8 @@ class PreviewControl:
         #ZMP State
         self.px_ref = []
         self.py_ref = []
+        self.px_ref_temp = 0.0
+        self.py_ref_temp = 0.0
 
         #Foot Step (Kenapa Butuh 3)
         #Foot step ini yang selalu di append dan pop di fungsi update_footstep()
@@ -404,12 +406,24 @@ class PreviewControl:
 
         # Hapus Refrensi Paling Depan Kalau Refrensi Sudah Sebanyak Yang Diinginkan
         if len(self.px_ref) == self.previewStepNum:
+            self.px_ref_temp = self.px_ref[0]
+            self.py_ref_temp = self.py_ref[0]
             self.px_ref.pop(0)
             self.py_ref.pop(0)
+
+        # elif len(self.px_ref) == int(self.previewStepNum - 1):
+        #     # self.px_ref[int(len(self.previewStepNum)/12)] = self.px_ref[int(len(self.previewStepNum)/12) + 1] + 0.95
+        #     # self.py_ref[int(len(self.previewStepNum)/12)] = self.py_ref[int(len(self.previewStepNum)/12) + 1] + 0.95
+        #     self.px_ref[0] = self.px_ref[0] + 0.5
+        #     self.py_ref[0] = self.py_ref[0] + 0.5
 
         # Tambah Refrensi Paling Belakang dari Footstep
         self.px_ref.append(self.footstep[0][0])
         self.py_ref.append(self.footstep[0][1])
+
+        if self.px_ref[0] == 0.05:
+            self.px_ref[0] = self.px_ref[0] + 9.0
+            # self.py_ref[0] = self.py_ref[0] + 0.015
 
     def update_preview_control(self):
         """
@@ -554,93 +568,106 @@ class PreviewControl:
         r_trajectory = []
         l_trajectory = []
 
+        n = 0
+
         while t < t_sim:
+            if n == 120:
+                n = 0
+
             self.update_walking_pattern()
             t += self.dt
             com_x.append(self.x[0, 0])
             com_y.append(self.y[0, 0])
 
+            # if n == 5:
+            #     px.append(self.px_ref_temp + 0.075)
+            #     py.append(self.py_ref_temp + 0.075)
+            # else:
             px.append(self.px_ref[0])
             py.append(self.py_ref[0])
 
             com_trajectory.append([self.x[0, 0],self.y[0, 0],0.19,0,0,0,0])
 
-            print(com_trajectory)
+            # print(com_trajectory)
 
             r_trajectory.append([self.r_foot[0,0], self.r_foot[0,1], self.r_foot[0,2],0,0,0,0])
             l_trajectory.append([self.l_foot[0,0], self.l_foot[0,1], self.l_foot[0,2],0,0,0,0])
+
             # if self.one_step:
             #     print("V_x_CoM: {}, V_y_CoM: {}, V_z_CoM: {}".format(self.v_com_pose[0,0], self.v_com_pose[0,1],
             #     self.v_com_pose[0,2]))
 
-        # if debug:
+            print(f"{px}\n")
+            n += 1
 
-        #     plt.figure(0)
-        #     plt.plot(px)
-        #     plt.plot(com_x)
+        if debug:
 
-        #     plt.figure(1)
-        #     plt.plot(py)
-        #     plt.plot(com_y)
+            plt.figure(0)
+            # plt.plot(px)
+            plt.plot(com_x)
 
-        #     plt.figure(2)
-        #     plt.plot(com_x,com_y)
-        #     plt.plot(px, py)
+            # plt.figure(1)
+            # plt.plot(py)
+            # plt.plot(com_y)
 
-        #     fig = plt.figure(3)
-        #     ax = fig.add_subplot(111, projection='3d')
-        #     ax.set_xlim3d(-0.1, 0.5)
-        #     ax.set_ylim3d(-0.1, 0.5)
-        #     ax.set_zlim3d(0, 0.2)
+            # plt.figure(2)
+            # plt.plot(com_x,com_y)
+            # plt.plot(px, py)
 
-        #     com_trajectory = np.array(com_trajectory)
-        #     l_trajectory = np.array(l_trajectory)
-        #     r_trajectory = np.array(r_trajectory)
+            # fig = plt.figure(3)
+            # ax = fig.add_subplot(111, projection='3d')
+            # ax.set_xlim3d(-0.1, 0.5)
+            # ax.set_ylim3d(-0.1, 0.5)
+            # ax.set_zlim3d(0, 0.2)
 
-        #     plot_trajectory(ax=ax, P=com_trajectory, s=0.02, show_direction=False)
-        #     plot_trajectory(ax=ax, P=r_trajectory,  s=0.02, show_direction=False)
-        #     plot_trajectory(ax=ax, P=l_trajectory,  s=0.02, show_direction=False)
+            # com_trajectory = np.array(com_trajectory)
+            # l_trajectory = np.array(l_trajectory)
+            # r_trajectory = np.array(r_trajectory)
 
-        #     plt.show()
+            # plot_trajectory(ax=ax, P=com_trajectory, s=0.02, show_direction=False)
+            # plot_trajectory(ax=ax, P=r_trajectory,  s=0.02, show_direction=False)
+            # plot_trajectory(ax=ax, P=l_trajectory,  s=0.02, show_direction=False)
+
+            plt.show()
 
 def main():
-    # FOOT_DISTANCE = 6.5 / 1000
-    # COM_HEIGHT = 230 / 1000
-    # X_OFFSET = 5 / 1000
-    # COM_SWING = 115.5 / 1000
-    # pc = PreviewControl(COM_HEIGHT, COM_SWING, X_OFFSET, FOOT_DISTANCE)
-    # pc.run()
-
-    # forward kinematic test
     FOOT_DISTANCE = 6.5 / 1000
     COM_HEIGHT = 230 / 1000
     X_OFFSET = 5 / 1000
     COM_SWING = 115.5 / 1000
     pc = PreviewControl(COM_HEIGHT, COM_SWING, X_OFFSET, FOOT_DISTANCE)
-    ik = InverseKinematic()
-    robot_model = createENOIDKinematicsModel()
-    robot_model.forwardKinematics()
+    pc.run()
 
-    time = 8
-    init_time = 0
-    n = 0
-    while init_time < time:
-        pc.update_walking_pattern()
-        JOINTS = ik.solve(pc.com_pose, pc.l_foot, pc.r_foot)
-        robot_model.BODY.p = pc.com_pose.T
-        robot_model.setJointAngle(JOINTS)
-        robot_model.forwardKinematics()
-        # print(robot_model.L_LEG_J4.p[0])
-        # print(robot_model.R_LEG_J4.p[0])
-        init_time += pc.dt
-        n += 1
+#     # forward kinematic test
+#     FOOT_DISTANCE = 6.5 / 1000
+#     COM_HEIGHT = 230 / 1000
+#     X_OFFSET = 5 / 1000
+#     COM_SWING = 115.5 / 1000
+#     pc = PreviewControl(COM_HEIGHT, COM_SWING, X_OFFSET, FOOT_DISTANCE)
+#     ik = InverseKinematic()
+#     robot_model = createENOIDKinematicsModel()
+#     robot_model.forwardKinematics()
 
-        if (n == (time/pc.dt)/2):
-            print(robot_model.L_LEG_J4.p[0])
-            print(robot_model.R_LEG_J4.p[0])
-        elif (n == (time/pc.dt)/1):
-            print(robot_model.L_LEG_J4.p[0])
-            print(robot_model.R_LEG_J4.p[0])
+#     time = 8
+#     init_time = 0
+#     n = 0
+#     while init_time < time:
+#         pc.update_walking_pattern()
+#         JOINTS = ik.solve(pc.com_pose, pc.l_foot, pc.r_foot)
+#         robot_model.BODY.p = pc.com_pose.T
+#         robot_model.setJointAngle(JOINTS)
+#         robot_model.forwardKinematics()
+#         # print(robot_model.L_LEG_J4.p[0])
+#         # print(robot_model.R_LEG_J4.p[0])
+#         init_time += pc.dt
+#         n += 1
+
+#         if (n == (time/pc.dt)/2):
+#             print(robot_model.L_LEG_J4.p[0])
+#             print(robot_model.R_LEG_J4.p[0])
+#         elif (n == (time/pc.dt)/1):
+#             print(robot_model.L_LEG_J4.p[0])
+#             print(robot_model.R_LEG_J4.p[0])
 
 if __name__ == "__main__":
     main()
