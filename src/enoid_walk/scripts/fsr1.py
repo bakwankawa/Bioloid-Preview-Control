@@ -8,9 +8,9 @@ from std_msgs.msg import Int32
 GPIO.setmode(GPIO.BCM)
 
 #define the pin that goes to the circuit
-pin_to_circuit = 4
+pin_to_circuit = 14
 
-com_pub = rospy.Publisher('fsr_2', Int32, queue_size=1)
+com_pub = rospy.Publisher('fsr_1', Int32, queue_size=1)
 
 
 def rc_time (pin_to_circuit):

@@ -13,7 +13,7 @@
     <script type="text/javascript" type="text/javascript">
         // INIT
         let ros = new ROSLIB.Ros({
-            url: "ws://192.168.137.93:9090",
+            url: "ws://192.168.137.154:9090",
         });
 
         ros.on("connection", function () {
@@ -379,9 +379,14 @@
                             </tr>
                             <tr>
                                 <td><input type="radio" id="step_fb" name="feedback"
-                                        onchange="mode_feedback_status(this)" value="2"> STEP FEEDBACK</td>
+                                        onchange="mode_feedback_status(this)" value="2"> Kanan FEEDBACK</td>
                                 <td><input type="radio" id="walk" name="mode_status" onchange="mode_walk_status(this)"
                                         value="1"> WALK</td>
+                            </tr>
+                            <tr>
+                                <td><input type="radio" id="kiri_fb" name="feedback"
+                                        onchange="mode_feedback_status(this)" value="3"> Kiri FEEDBACK</td>
+                                <td></td>
                             </tr>
                         </table>
                     </div>

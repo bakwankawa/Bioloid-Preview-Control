@@ -421,8 +421,8 @@ class PreviewControl:
         self.px_ref.append(self.footstep[0][0])
         self.py_ref.append(self.footstep[0][1])
 
-        if self.px_ref[0] == 0.05:
-            self.px_ref[0] = self.px_ref[0] + 9.0
+        # if self.px_ref[0] == 0.05:
+        #     self.px_ref[0] = self.px_ref[0] + 9.0
             # self.py_ref[0] = self.py_ref[0] + 0.015
 
     def update_preview_control(self):

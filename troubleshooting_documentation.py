@@ -38,4 +38,38 @@
 8   Q: Fungsi dioda penyearah pada board
     A: menjadi penghamba arus dari arah sebaliknya, ex: servo gerak menghasilkan arus,
         harus ditahan klo misal over current bisa merusak part lain
+
+9.  Q: Cara setup permission RPI.GPIO
+    A: sudo chown root.gpio /dev/gpiomem
+        sudo chmod g+rw /dev/gpiomem
+
+
+
+
+
+=============================================
+HISTORY TUNNING FEEDBACK
+
+1. 25/04/2022
+    Kp Pitch : 0.22
+    Kd Pitch : 0.20
+    ik.tilt  : 20
+    x.offset : 18 / 1000
+    foot_distance : 6.5 / 1000
+
+
+
+=============================================
+CARA AKSES
+
+1.  roscore
+    rosrun rosbridge_server rosbridge_websocket
+    skripsi_path, python3 -m http.server
+    rosrun enoid_orientation mpu_node.py
+    rosrun enoid_walk velocityControl_node.py
+
+2.  roscore
+    rosrun rosserial_python serial_node.py _port:=/dev/ttyUSB1 _baud:=1000000
+    rostopic echo /fsr1
+    rostopic echo /fsr2
 """

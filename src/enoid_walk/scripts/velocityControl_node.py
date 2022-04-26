@@ -2,7 +2,7 @@
 
 import rospy
 from geometry_msgs.msg import Vector3, Twist
-from std_msgs.msg import Int32, Bool
+from std_msgs.msg import Int32, Bool, Float32
 
 from preview_controller import *
 from inverse_kinematic import *
@@ -22,12 +22,14 @@ push_data = Bool()
 com_msg = Vector3()
 offset_status = Int32()
 offset_param = Vector3()
-fsr_1 = Int32()
-fsr_2 = Int32()
+# fsr1 = Int32()
+# fsr2 = Int32()
+fsr1 = Float32()
+fsr2 = Float32()
 
-FOOT_DISTANCE = 6.5 / 1000
+FOOT_DISTANCE = 7.5 / 1000
 COM_HEIGHT = 230 / 1000
-X_OFFSET = 5 / 1000
+X_OFFSET = 5 / 1000        # 18 / 1000
 COM_SWING = 115.5 / 1000
 
 COM = np.matrix([X_OFFSET, 0.0, COM_HEIGHT])
@@ -51,6 +53,7 @@ delta_step = 0.0
 # velocity control
 dsp = True
 ssp = False
+ssp_done = False
 x = np.zeros((2,2))
 y = np.zeros((2,2))
 v_com_x = np.zeros((2,2))
@@ -97,12 +100,12 @@ def offset_callback(msg):
     offset_param = msg
 
 def fsr1_callback(msg):
-    global fsr_1
-    fsr_1 = msg
+    global fsr1
+    fsr1 = msg
 
 def fsr2_callback(msg):
-    global fsr_2
-    fsr_2 = msg
+    global fsr2
+    fsr2 = msg
 
 def bezier_curve(phase, p_start, p_cnt, p_end):
     if(phase >= 1):
@@ -249,12 +252,12 @@ def final_test(pc, fz, ik):
 def velocity_step(pc):
     global v_com_x, v_com_y, x, y, time_step_done
     v_com_x = (x[0][1] - x[0][0]) / time_step_done
-    v_com_y = (y[0][0] - y[0][1]) / time_step_done
+    v_com_y = (y[0][1] - y[0][0]) / time_step_done
     
     print(f"v_com_x : {v_com_x}, v_com_y : {v_com_y}")
 
 def main():
-    global X_OFFSET, COM, com_msg, cmd_vel, offset_param, fsr_1, fsr_2, dsp, ssp, x, y, time_step_done
+    global X_OFFSET, COM, com_msg, cmd_vel, offset_param, fsr1, fsr2, dsp, ssp, ssp_done, x, y, time_step_done
     rospy.init_node('velocityControl_walk', anonymous=False)
     rospy.Subscriber("ori_data", Vector3, ori_callback)
     rospy.Subscriber("gyr_data", Vector3, gyr_callback)
@@ -264,9 +267,11 @@ def main():
     rospy.Subscriber("feedback_status", Int32, feedback_callback)
     rospy.Subscriber("gain_control", Twist, gain_callback)
     rospy.Subscriber("offset_status", Int32, offset_status_callback)
-    rospy.Subscriber("offset_param", Twist, offset_callback)
-    rospy.Subscriber("fsr_1", Int32, fsr1_callback)
-    rospy.Subscriber("fsr_2", Int32, fsr2_callback)
+    rospy.Subscriber("offset_param", Vector3, offset_callback)
+    # rospy.Subscriber("fsr1", Int32, fsr1_callback)
+    # rospy.Subscriber("fsr2", Int32, fsr2_callback)
+    rospy.Subscriber("fsr1", Float32, fsr1_callback)
+    rospy.Subscriber("fsr2", Float32, fsr2_callback)
     com_pub = rospy.Publisher('com_data', Vector3, queue_size=1)
 
     rate = rospy.Rate(30)
@@ -276,60 +281,100 @@ def main():
     sc = ServoController()
     fz = FuzzyLogic()
     
-    ik.TILT = 10
+    ik.TILT = 15
     stand(ik)
 
     rospy.loginfo("E-NOID WALK")
 
-    n = 0
-    time_step_done = 0
+    time_step_vel = 0.0
+    time_step_done = 0.0
 
     while not rospy.is_shutdown():
 
         # ganti parameter v dari websocket
         pc.cmd_x = cmd_vel.x
-        rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
+        # rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
+        # rospy.loginfo("fsr1_data: %s", str(fsr1.data))
+        # rospy.loginfo("hip_offset: %s", str(offset_param.x))
 
         # tunning offset robot
         ik.hip_offset = offset_param.x * np.pi / 180
         ik.ankle_offset = offset_param.y * np.pi / 180
-        ik.TILT = offset_param.z * np.pi / 180
-        
+        # ik.TILT = offset_param.z * np.pi / 180
+
         if walk_cmd.data == -1:
 
             # print("RESET WALK")
             pc = PreviewControl(COM_HEIGHT, COM_SWING, X_OFFSET, FOOT_DISTANCE)
             stand(ik)
 
+
         elif walk_cmd.data == 1:
 
+            # if walk_mode.data == 1 and (feedback_mode.data == 2):
             if walk_mode.data == 1:
+                ik.TILT = 15
                 X_OFFSET = 18 /1000
                 walk_test(pc, ik)
             else:
                 stand(ik)
-                X_OFFSET = 5 /1000
+                ik.TILT = 15
+                X_OFFSET = 18 /1000
+
+                
+            if ((feedback_mode.data == 1) or (feedback_mode.data == 2)) and not(finish):
+                # print(ori_data[1] * 180/np.pi)
+                # print(gyr_data[1] * 180/np.pi)
+                
+                # print("ANKLE")
+                igl_data[1] +=  ori_data[1]/30
+
+                delta_roll = 0.04 * ori_data[0] + 0.036 * gyr_data[0]
+                delta_pitch = -gain_ctrl.linear.y * ori_data[1] + -gain_ctrl.angular.y * gyr_data[1] + gain_ctrl.angular.x * igl_data[1]
+                JOINTS[3] += delta_pitch
+                JOINTS[8] -= delta_pitch
+                # JOINTS[4] += delta_roll
+                JOINTS[9] -= delta_roll
 
         sc.sync_write_pos(JOINTS)
 
-        com_pub.publish(com_msg)
+        # com_pub.publish(com_msg)
 
-        if fsr_1.data == 1 and fsr_2.data == 1 and dsp == True:
-            time_step_done = time_step
-            print(velocity_step(pc))
+        # FSM untuk tes dengan dsp
+        # if fsr1.data == 1 and fsr2.data == 1 and dsp == True:
+        #     time_step_done = time_step_vel
+        #     velocity_step(pc)
+        #     dsp = False
+        #     ssp = True
+        #     start_step = rospy.Time.now().to_sec()
+        #     x[0][0] = pc.x[0,0]
+        #     y[0][0] = pc.y[0,0]
+        # elif (((fsr1.data == 1 and fsr2.data == 0) or (fsr1.data == 0 and fsr2.data == 1)) and ssp == True):
+        #     time_step_vel = rospy.Time.now().to_sec() - start_step
+        # else:
+        #     x[0][1] = pc.x[0,0]
+        #     y[0][1] = pc.y[0,0]
+        #     dsp = True
+        #     ssp = False
+
+
+        if fsr1.data > 4 and dsp == True:
+            time_step_done = time_step_vel
+            velocity_step(pc)
             dsp = False
             ssp = True
             start_step = rospy.Time.now().to_sec()
             x[0][0] = pc.x[0,0]
             y[0][0] = pc.y[0,0]
-        elif ((fsr_1.data == 1 and fsr_2.data == 0) or (fsr_1.data == 0 and fsr_2.data == 1) and ssp == True):
-            time_step = rospy.Time.now().to_sec() - start_step
-        else:
+        elif (fsr1.data == 0 or fsr1.data < 4) and ssp == True:
+            time_step_vel = rospy.Time.now().to_sec() - start_step
+            ssp_done = True
+        elif fsr1.data > 4 and ssp_done == True:
             x[0][1] = pc.x[0,0]
             y[0][1] = pc.y[0,0]
             dsp = True
             ssp = False
-
+            ssp_done = False
 
         rate.sleep()
 
