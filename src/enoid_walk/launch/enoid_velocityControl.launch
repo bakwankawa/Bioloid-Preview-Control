@@ -1,3 +1,7 @@
 <launch>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+    <include file="$(find enoid_orientation)/launch/mpu_node.launch"/>
+    <include file="$(find rosserial_python)/launch/enoid_fsr.launch"/>
+
     <node pkg="enoid_walk" type="velocityControl_node.py" name="velocityControl_node" output="screen"></node>
 </launch>

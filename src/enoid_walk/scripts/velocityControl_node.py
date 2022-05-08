@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 
+from turtle import left
 import rospy
 from geometry_msgs.msg import Vector3, Twist
 from std_msgs.msg import Int32, Bool, Float32
@@ -8,6 +9,7 @@ from preview_controller import *
 from inverse_kinematic import *
 from servo_controller import *
 from fuzzy_logic import *
+from rot_mat import *
 
 ori_data = np.array([.0, .0, .0])
 gyr_data = np.array([.0, .0, .0])
@@ -20,6 +22,7 @@ walk_mode = Int32()
 walk_cmd = Int32()
 push_data = Bool()
 com_msg = Vector3()
+vel_msg = Vector3()
 offset_status = Int32()
 offset_param = Vector3()
 # fsr1 = Int32()
@@ -54,10 +57,12 @@ delta_step = 0.0
 dsp = True
 ssp = False
 ssp_done = False
-x = np.zeros((2,2))
-y = np.zeros((2,2))
-v_com_x = np.zeros((2,2))
-v_com_y = np.zeros((2,2))
+x0 = np.matrix(np.zeros(3)).T
+y0 = np.matrix(np.zeros(3)).T
+x0_real = np.matrix(np.zeros(3)).T
+y0_real = np.matrix(np.zeros(3)).T
+# error_com = []
+com_real = np.array(np.matrix([.0, .0, .0]).T)
 
 def ori_callback(msg):
     ori_data[0] = msg.x
@@ -249,15 +254,41 @@ def final_test(pc, fz, ik):
             com_msg.y = COM[0,1]
             com_msg.z = COM[0,2]
 
-def velocity_step(pc):
-    global v_com_x, v_com_y, x, y, time_step_done
-    v_com_x = (x[0][1] - x[0][0]) / time_step_done
-    v_com_y = (y[0][1] - y[0][0]) / time_step_done
-    
-    print(f"v_com_x : {v_com_x}, v_com_y : {v_com_y}")
+def velocity_step(pc, rm, time_step):
+    global x0, y0, x0_real, y0_real, com_real
+    current_com = np.array(np.matrix([.0, .0, .0]).T)
+
+    current_com = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+
+    v_com_x = (pc.x[0,0] - x0[0,0]) / time_step
+    # v_com_y = (pc.y[0,0] - y0[0,0]) / time_step
+
+    # v_com_real_x = ((pc.x[0,0] * gyr_data[0]) - x0_real[0,0]) / time_step  # NI DPT DARI MANA DA KOK DIKALI GYRO
+    # v_com_real_y = ((pc.y[0,0] * gyr_data[1]) - y0_real[0,0]) / time_step
+    v_com_real_x = ((current_com[0,0]) - com_real[0,0]) / time_step
+
+    # v_com_error_x = v_com_real_x - v_com_x
+    v_com_error_x = v_com_real_x - v_com_x
+    vel_msg.x = v_com_error_x
+    # print(f"v_com_x : {v_com_x}, v_com_y : {v_com_y}")
+    # print(f"pc.x : {pc.x[0,0]}, x0 : {x0[0,0]}")
+    # rospy.loginfo("v_com_x: %s", str(v_com_x))
+    # rospy.loginfo("v_error_x: %s", str(v_com_error_x))
+    return v_com_error_x
+
+def velocity_feedback(pc, rm, error_v_com):
+    global error_com, vel_threshold
+    # com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+    # error_com = com_real[0,0] - pc.com_pose[0,0]
+
+    if abs(error_v_com) > vel_threshold: # belum di def gain utk cmd x offset
+        pc.cmd_x_offset = 0.005
+
+    # cara kedua bisa tambah offset com_pose sebelum di sikat servo
+    # cara ketiga ada di komen bawah
 
 def main():
-    global X_OFFSET, COM, com_msg, cmd_vel, offset_param, fsr1, fsr2, dsp, ssp, ssp_done, x, y, time_step_done
+    global X_OFFSET, COM, com_msg, cmd_vel, offset_param, fsr1, fsr2, dsp, ssp, ssp_done, x0, y0, x0_real, y0_real, vel_threshold, com_real
     rospy.init_node('velocityControl_walk', anonymous=False)
     rospy.Subscriber("ori_data", Vector3, ori_callback)
     rospy.Subscriber("gyr_data", Vector3, gyr_callback)
@@ -273,6 +304,7 @@ def main():
     rospy.Subscriber("fsr1", Float32, fsr1_callback)
     rospy.Subscriber("fsr2", Float32, fsr2_callback)
     com_pub = rospy.Publisher('com_data', Vector3, queue_size=1)
+    vel_pub = rospy.Publisher('vel_data', Vector3, queue_size=1)
 
     rate = rospy.Rate(30)
 
@@ -280,14 +312,25 @@ def main():
     ik = InverseKinematic()
     sc = ServoController()
     fz = FuzzyLogic()
+    rm = RotMat()
     
     ik.TILT = 15
     stand(ik)
 
-    rospy.loginfo("E-NOID WALK")
+    # TUNNING ISENG VC
+    # pc.swing_height = 0.045
+    # pc.t_step = 0.2
+    # pc.dsp_ratio = 0.07
+    left_first = True
+    right_first = False
+    right_done = False
+    vel_threshold = 0.01
+    vel_error = 0.0
 
     time_step_vel = 0.0
-    time_step_done = 0.0
+    # time_step_done = 0.0
+
+    rospy.loginfo("E-NOID WALK")
 
     while not rospy.is_shutdown():
 
@@ -296,10 +339,11 @@ def main():
         # rospy.loginfo("cmd_x: %s", str(cmd_vel.x))
         # rospy.loginfo("fsr1_data: %s", str(fsr1.data))
         # rospy.loginfo("hip_offset: %s", str(offset_param.x))
+        # rospy.loginfo("pc.x: %s", str(pc.x))
 
         # tunning offset robot
-        ik.hip_offset = offset_param.x * np.pi / 180
-        ik.ankle_offset = offset_param.y * np.pi / 180
+        ik.hip_offset = -offset_param.x * np.pi / 180
+        ik.ankle_offset = -offset_param.y * np.pi / 180
         # ik.TILT = offset_param.z * np.pi / 180
 
         if walk_cmd.data == -1:
@@ -315,6 +359,7 @@ def main():
             if walk_mode.data == 1:
                 ik.TILT = 15
                 X_OFFSET = 18 /1000
+                velocity_feedback(pc, rm, vel_error)
                 walk_test(pc, ik)
             else:
                 stand(ik)
@@ -329,52 +374,49 @@ def main():
                 # print("ANKLE")
                 igl_data[1] +=  ori_data[1]/30
 
-                delta_roll = 0.04 * ori_data[0] + 0.036 * gyr_data[0]
+                delta_roll = gain_ctrl.linear.x * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
                 delta_pitch = -gain_ctrl.linear.y * ori_data[1] + -gain_ctrl.angular.y * gyr_data[1] + gain_ctrl.angular.x * igl_data[1]
                 JOINTS[3] += delta_pitch
                 JOINTS[8] -= delta_pitch
                 # JOINTS[4] += delta_roll
                 JOINTS[9] -= delta_roll
 
-        sc.sync_write_pos(JOINTS)
+        if fsr2.data > 40 and left_first == True:
+            if right_done == True:
+                time_step_vel = rospy.Time.now().to_sec() - start_step
+                # x[0][1] = pc.x[0,0]
+                # y[0][1] = pc.y[0,0]
+                vel_error = velocity_step(pc, rm, time_step_vel)
+                """bikin if error meleibihi tresshold v, panggil ulang IKSolve (buat ambil joint invers dari com pose after error)
+                # pc.com_pose += v_com_error_x * gain
+                # QUESTIONS: COM dinamis gini mengaruhi r foot dan l foot yg akan dieksekusi servo gak?
+                # JOINTS = ik.solve(pc.com_pose, pc.l_foot, pc.r_foot)"""
+                right_done = False
 
-        # com_pub.publish(com_msg)
-
-        # FSM untuk tes dengan dsp
-        # if fsr1.data == 1 and fsr2.data == 1 and dsp == True:
-        #     time_step_done = time_step_vel
-        #     velocity_step(pc)
-        #     dsp = False
-        #     ssp = True
-        #     start_step = rospy.Time.now().to_sec()
-        #     x[0][0] = pc.x[0,0]
-        #     y[0][0] = pc.y[0,0]
-        # elif (((fsr1.data == 1 and fsr2.data == 0) or (fsr1.data == 0 and fsr2.data == 1)) and ssp == True):
-        #     time_step_vel = rospy.Time.now().to_sec() - start_step
-        # else:
-        #     x[0][1] = pc.x[0,0]
-        #     y[0][1] = pc.y[0,0]
-        #     dsp = True
-        #     ssp = False
-
-
-        if fsr1.data > 4 and dsp == True:
-            time_step_done = time_step_vel
-            velocity_step(pc)
-            dsp = False
-            ssp = True
             start_step = rospy.Time.now().to_sec()
-            x[0][0] = pc.x[0,0]
-            y[0][0] = pc.y[0,0]
-        elif (fsr1.data == 0 or fsr1.data < 4) and ssp == True:
+            x0 = pc.x
+            y0 = pc.y
+            # x0_real = pc.x * gyr_data[0]
+            # y0_real = pc.y * gyr_data[1]
+            com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+            right_first = True
+            left_first = False
+        elif fsr1.data > 40 and right_first == True:
             time_step_vel = rospy.Time.now().to_sec() - start_step
-            ssp_done = True
-        elif fsr1.data > 4 and ssp_done == True:
-            x[0][1] = pc.x[0,0]
-            y[0][1] = pc.y[0,0]
-            dsp = True
-            ssp = False
-            ssp_done = False
+            vel_error = velocity_step(pc, rm, time_step_vel)
+            right_done = True
+            start_step = rospy.Time.now().to_sec()
+            x0 = pc.x
+            y0 = pc.y
+            # x0_real = pc.x * gyr_data[0]
+            # y0_real = pc.y * gyr_data[1]
+            com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+            right_first = False
+            left_first = True
+
+        sc.sync_write_pos(JOINTS)
+        com_pub.publish(com_msg)
+        vel_pub.publish(vel_msg)
 
         rate.sleep()
 

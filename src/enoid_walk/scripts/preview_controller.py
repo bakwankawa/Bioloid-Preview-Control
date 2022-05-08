@@ -19,6 +19,7 @@ class PreviewControl:
         self.zc = com_height
         self.g = 9.8
         self.x_offset = x_offset
+        # self.v_com_error_x = 0
         self.com_swing = com_swing
         self.foot_y = foot_distance + (0.0385)
         self.first = False
@@ -106,6 +107,7 @@ class PreviewControl:
         self.cmd_x = 0.025
         self.cmd_y = 0.0
         self.cmd_a = np.radians(0)
+        self.cmd_x_offset = 0.0
 
         self.sx = 0.0
         self.sy = 0.0
@@ -353,7 +355,7 @@ class PreviewControl:
             self.footstep.pop(0)
 
             if self.support_foot == 1:
-                self.sx = self.cmd_x
+                self.sx = self.cmd_x + self.cmd_x_offset
                 self.sy = -2 * self.hip_offset + self.cmd_y
                 self.sa += self.cmd_a
                 # Kajita's Book P:132 Eq:4.61
