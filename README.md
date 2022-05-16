@@ -1,8 +1,8 @@
 # To-Do List
 <br>
 <ul>
-  <li>1. Kendali cmd vel sudah dibuat, tes metode 1</li>
-  <li>2. ambil data velocity</li>
-  <li>3. Konfirmasi ori pake kalman doang cukup? klo tidak filter lagi</li>
-  <li>4. Cari cara kalibrasi ori imu</li>
+  <li>1. Define karakteristik sistem</li>
+  <li>2. LQR tunning realtime?</li>
+  <li>3. Mulai nulis!</li>
+  <li>4. Seminggu coba imu</li>
 </ul>

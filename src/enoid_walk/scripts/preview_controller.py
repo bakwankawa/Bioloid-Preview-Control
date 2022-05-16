@@ -558,7 +558,7 @@ class PreviewControl:
         
         """
 
-        t_sim = 3
+        t_sim = 8
         t = 0
         com_x = []
         com_y = []
@@ -570,11 +570,11 @@ class PreviewControl:
         r_trajectory = []
         l_trajectory = []
 
-        n = 0
+        # n = 0
 
         while t < t_sim:
-            if n == 120:
-                n = 0
+            # if n == 120:
+            #     n = 0
 
             self.update_walking_pattern()
             t += self.dt
@@ -595,12 +595,12 @@ class PreviewControl:
             r_trajectory.append([self.r_foot[0,0], self.r_foot[0,1], self.r_foot[0,2],0,0,0,0])
             l_trajectory.append([self.l_foot[0,0], self.l_foot[0,1], self.l_foot[0,2],0,0,0,0])
 
-            # if self.one_step:
-            #     print("V_x_CoM: {}, V_y_CoM: {}, V_z_CoM: {}".format(self.v_com_pose[0,0], self.v_com_pose[0,1],
-            #     self.v_com_pose[0,2]))
+            if self.one_step:
+                print("V_x_CoM: {}, V_y_CoM: {}, V_z_CoM: {}".format(self.v_com_pose[0,0], self.v_com_pose[0,1],
+                self.v_com_pose[0,2]))
 
-            print(f"{px}\n")
-            n += 1
+            # print(f"{px}\n")
+            # n += 1
 
         if debug:
 

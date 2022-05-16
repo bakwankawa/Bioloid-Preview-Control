@@ -14,6 +14,7 @@ from rot_mat import *
 ori_data = np.array([.0, .0, .0])
 gyr_data = np.array([.0, .0, .0])
 igl_data = np.array([.0, .0, .0])
+comp_data = np.array([.0, .0, .0])
 
 cmd_vel = Vector3()
 gain_ctrl = Twist()
@@ -22,6 +23,7 @@ walk_mode = Int32()
 walk_cmd = Int32()
 push_data = Bool()
 com_msg = Vector3()
+com_real_msg = Vector3()
 vel_msg = Vector3()
 offset_status = Int32()
 offset_param = Vector3()
@@ -33,13 +35,14 @@ fsr2 = Float32()
 FOOT_DISTANCE = 7.5 / 1000
 COM_HEIGHT = 230 / 1000
 X_OFFSET = 5 / 1000        # 18 / 1000
+Y_OFFSET = -2 / 1000
 COM_SWING = 115.5 / 1000
 
-COM = np.matrix([X_OFFSET, 0.0, COM_HEIGHT])
+COM = np.matrix([X_OFFSET, Y_OFFSET, COM_HEIGHT])
 LEFT = np.matrix([0.0, 38.5 / 1000 + FOOT_DISTANCE, 0.0])
 RIGHT = np.matrix([0.0, -38.5 / 1000 - FOOT_DISTANCE, 0.0])
 
-uCOM = np.matrix([X_OFFSET, 0.0, COM_HEIGHT])
+uCOM = np.matrix([X_OFFSET, Y_OFFSET, COM_HEIGHT])
 uLEFT = np.matrix([0.0, 38.5 / 1000 + FOOT_DISTANCE, 0.0])
 uRIGHT = np.matrix([0.0, -38.5 / 1000 - FOOT_DISTANCE, 0.0])
 
@@ -71,6 +74,11 @@ def ori_callback(msg):
 def gyr_callback(msg):
     gyr_data[0] = msg.x 
     gyr_data[1] = msg.y
+
+def comp_callback(msg):
+    comp_data[0] = msg.x 
+    comp_data[1] = msg.y
+    comp_data[2] = msg.z
 
 def vel_callback(msg):
     global cmd_vel
@@ -126,6 +134,23 @@ def bezier_curve(phase, p_start, p_cnt, p_end):
 
     return path
 
+def Rx(theta):
+    return np.matrix([[1, 0, 0],
+                    [0, np.cos(theta), -np.sin(theta)],
+                    [0, np.sin(theta), np.cos(theta)]])
+
+
+def Ry(theta):
+    return np.matrix([[np.cos(theta), 0, np.sin(theta)],
+                    [0, 1, 0],
+                    [-np.sin(theta), 0, np.cos(theta)]])
+
+
+def Rz(theta):
+    return np.matrix([[np.cos(theta), -np.sin(theta), 0],
+                    [np.sin(theta), np.cos(theta), 0],
+                    [0, 0, 1]])
+
 def stand(ik):
     global JOINTS, finish, step, delta_step, COM, LEFT, RIGHT,  com_msg
     COM = np.matrix([X_OFFSET, 0.0, COM_HEIGHT])
@@ -139,6 +164,10 @@ def stand(ik):
     com_msg.y = COM[0,1]
     com_msg.z = COM[0,2]
 
+    com_real_msg.x = COM[0,0] * ori_data[0]
+    com_real_msg.y = COM[0,1] * ori_data[1]
+    com_real_msg.z = COM[0,2] * ori_data[2]
+
 
 def walk_test(pc, ik):
     global JOINTS, COM, LEFT, RIGHT, com_msg
@@ -150,12 +179,20 @@ def walk_test(pc, ik):
         com_msg.x = pc.com_pose[0,0]
         com_msg.y = pc.com_pose[0,1]
         com_msg.z = pc.com_pose[0,2]
+        
+        com_real_msg.x = pc.com_pose[0,0] * ori_data[0]
+        com_real_msg.y = pc.com_pose[0,1] * ori_data[1]
+        com_real_msg.z = pc.com_pose[0,2] * ori_data[2]
     else:
         JOINTS = ik.solve(COM, LEFT, RIGHT)
     
         com_msg.x = COM[0,0]
         com_msg.y = COM[0,1]
         com_msg.z = COM[0,2]
+
+        com_real_msg.x = COM[0,0] * ori_data[0]
+        com_real_msg.y = COM[0,1] * ori_data[1]
+        com_real_msg.z = COM[0,2] * ori_data[2]
 
 
 def push_test(fz, ik):
@@ -256,25 +293,28 @@ def final_test(pc, fz, ik):
 
 def velocity_step(pc, rm, time_step):
     global x0, y0, x0_real, y0_real, com_real
-    current_com = np.array(np.matrix([.0, .0, .0]).T)
+    # current_com = np.array(np.matrix([.0, .0, .0]).T)
 
-    current_com = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+    # current_com = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
 
     v_com_x = (pc.x[0,0] - x0[0,0]) / time_step
     # v_com_y = (pc.y[0,0] - y0[0,0]) / time_step
 
     # v_com_real_x = ((pc.x[0,0] * gyr_data[0]) - x0_real[0,0]) / time_step  # NI DPT DARI MANA DA KOK DIKALI GYRO
     # v_com_real_y = ((pc.y[0,0] * gyr_data[1]) - y0_real[0,0]) / time_step
-    v_com_real_x = ((current_com[0,0]) - com_real[0,0]) / time_step
+    # v_com_real_x = ((current_com[0,0]) - com_real[0,0]) / time_step
 
     # v_com_error_x = v_com_real_x - v_com_x
-    v_com_error_x = v_com_real_x - v_com_x
-    vel_msg.x = v_com_error_x
+    # v_com_error_x = v_com_real_x - v_com_x
+
+    # vel_msg.x = v_com_error_x
+    vel_msg.x = v_com_x
     # print(f"v_com_x : {v_com_x}, v_com_y : {v_com_y}")
-    # print(f"pc.x : {pc.x[0,0]}, x0 : {x0[0,0]}")
+    # print(f"pc.x : {v_com_x}, x0 : {v_com_real_x}")
     # rospy.loginfo("v_com_x: %s", str(v_com_x))
-    # rospy.loginfo("v_error_x: %s", str(v_com_error_x))
-    return v_com_error_x
+    # rospy.loginfo("v_error_x: %s", str(v_com_x))
+    # return v_com_error_x
+    return v_com_x
 
 def velocity_feedback(pc, rm, error_v_com):
     global error_com, vel_threshold
@@ -299,11 +339,13 @@ def main():
     rospy.Subscriber("gain_control", Twist, gain_callback)
     rospy.Subscriber("offset_status", Int32, offset_status_callback)
     rospy.Subscriber("offset_param", Vector3, offset_callback)
+    rospy.Subscriber("comp_data", Vector3, comp_callback)
     # rospy.Subscriber("fsr1", Int32, fsr1_callback)
     # rospy.Subscriber("fsr2", Int32, fsr2_callback)
     rospy.Subscriber("fsr1", Float32, fsr1_callback)
     rospy.Subscriber("fsr2", Float32, fsr2_callback)
     com_pub = rospy.Publisher('com_data', Vector3, queue_size=1)
+    com_real_pub = rospy.Publisher('com_real_data', Vector3, queue_size=1)
     vel_pub = rospy.Publisher('vel_data', Vector3, queue_size=1)
 
     rate = rospy.Rate(30)
@@ -359,7 +401,7 @@ def main():
             if walk_mode.data == 1:
                 ik.TILT = 15
                 X_OFFSET = 18 /1000
-                velocity_feedback(pc, rm, vel_error)
+                # velocity_feedback(pc, rm, vel_error)
                 walk_test(pc, ik)
             else:
                 stand(ik)
@@ -375,13 +417,14 @@ def main():
                 igl_data[1] +=  ori_data[1]/30
 
                 delta_roll = gain_ctrl.linear.x * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
+                delta_roll2 = gain_ctrl.linear.z * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
                 delta_pitch = -gain_ctrl.linear.y * ori_data[1] + -gain_ctrl.angular.y * gyr_data[1] + gain_ctrl.angular.x * igl_data[1]
                 JOINTS[3] += delta_pitch
                 JOINTS[8] -= delta_pitch
-                # JOINTS[4] += delta_roll
+                JOINTS[4] += delta_roll2
                 JOINTS[9] -= delta_roll
 
-        if fsr2.data > 40 and left_first == True:
+        if fsr2.data > 35 and left_first == True:
             if right_done == True:
                 time_step_vel = rospy.Time.now().to_sec() - start_step
                 # x[0][1] = pc.x[0,0]
@@ -398,7 +441,7 @@ def main():
             y0 = pc.y
             # x0_real = pc.x * gyr_data[0]
             # y0_real = pc.y * gyr_data[1]
-            com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+            # com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
             right_first = True
             left_first = False
         elif fsr1.data > 40 and right_first == True:
@@ -410,12 +453,14 @@ def main():
             y0 = pc.y
             # x0_real = pc.x * gyr_data[0]
             # y0_real = pc.y * gyr_data[1]
-            com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
+            # com_real = rm.Rz(0) * rm.Ry(ori_data[1]) * rm.Rx(ori_data[0]) * np.matrix([pc.com_pose[0,0], pc.com_pose[0,1], pc.com_pose[0,2]]).T
             right_first = False
             left_first = True
 
         sc.sync_write_pos(JOINTS)
+        
         com_pub.publish(com_msg)
+        # com_real_pub.publish(com_real_msg)
         vel_pub.publish(vel_msg)
 
         rate.sleep()
