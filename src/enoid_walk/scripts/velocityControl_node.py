@@ -417,11 +417,11 @@ def main():
                 igl_data[1] +=  ori_data[1]/30
 
                 delta_roll = gain_ctrl.linear.x * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
-                delta_roll2 = gain_ctrl.linear.z * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
+                # delta_roll2 = gain_ctrl.linear.z * ori_data[0] + gain_ctrl.angular.x * gyr_data[0]
                 delta_pitch = -gain_ctrl.linear.y * ori_data[1] + -gain_ctrl.angular.y * gyr_data[1] + gain_ctrl.angular.x * igl_data[1]
                 JOINTS[3] += delta_pitch
                 JOINTS[8] -= delta_pitch
-                JOINTS[4] += delta_roll2
+                # JOINTS[4] += delta_roll2
                 JOINTS[9] -= delta_roll
 
         if fsr2.data > 35 and left_first == True:
